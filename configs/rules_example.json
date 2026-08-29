@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "description": "Sample DPI Filter Rules Configuration",
+  "rules": {
+    "blocked_ips": [
+      "192.168.1.50",
+      "10.0.0.99"
+    ],
+    "blocked_domains": [
+      "*.tiktok.com",
+      "*.facebook.com",
+      "doubleclick.net"
+    ],
+    "blocked_apps": [
+      "YouTube",
+      "TikTok",
+      "BitTorrent"
+    ],
+    "blocked_ports": [
+      23,
+      445,
+      3389
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+.cache/
+
+# IDE / Editor artifacts
+.vscode/
+.vs/
+.idea/
+*.user
+*.suo
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+compile_commands.json
+
+# Binary outputs
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.obj
+*.o
+*.pdb
+
+# Test captures and logs
+*.pcap
+*.log
+scratch/
+
+# Python / Dashboard
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
