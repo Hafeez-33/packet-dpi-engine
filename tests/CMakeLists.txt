@@ -28,8 +28,18 @@ packet_dpi_enable_warnings(protocol_parser_test)
 
 add_test(NAME ProtocolParserTest COMMAND protocol_parser_test)
 
+# Flow Tracking Unit Test Target
+add_executable(flow_tracking_test
+    flow_tracking_test.cpp
+)
+
+target_link_libraries(flow_tracking_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(flow_tracking_test)
+
+add_test(NAME FlowTrackingTest COMMAND flow_tracking_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()
