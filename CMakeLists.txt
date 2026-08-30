@@ -48,6 +48,11 @@ add_library(packet_dpi_core
     src/packet/pcap_reader.cpp
     src/protocols/protocol_types.cpp
     src/protocols/protocol_parser.cpp
+    src/flow/ip_address.cpp
+    src/flow/flow_key.cpp
+    src/flow/tcp_state_machine.cpp
+    src/flow/flow_entry.cpp
+    src/flow/flow_table.cpp
 )
 
 target_include_directories(packet_dpi_core

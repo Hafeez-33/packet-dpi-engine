@@ -9,11 +9,11 @@ A high-performance, production-oriented **C++17 Deep Packet Inspection (DPI)** e
 ### Key Capabilities
 - **Stage 1 PCAP Reader [IMPLEMENTED]**: Streaming RAII classic `.pcap` parser with native & byte-swapped endian support, validation, truncated stream safety, and configurable payload memory safety limits.
 - **Stage 2 Protocol Parser [IMPLEMENTED]**: Bounds-checked, alignment-safe parsing for Ethernet II, IPv4 (with IHL options & fragmentation handling), IPv6 base headers, TCP (flags, data offset, options, zero-copy payload views), and UDP with rigorous error reporting.
-- **Stage 3 Bidirectional Flow Engine [PLANNED]**: Canonical 5-tuple flow state machine with TCP handshake tracking.
-- **Layer-7 Inspection [PLANNED]**: TLS 1.2/1.3 SNI extraction, HTTP `Host:` decoding, DNS query resolution.
-- **Policy & Rule Engine [PLANNED]**: High-speed filtering by IP, domain wildcard, application type, and transport port.
-- **Multi-threaded Pipeline [PLANNED]**: Consistent flow hashing across fast-path worker threads with lock-free statistics.
-- **FastAPI Telemetry Dashboard [PLANNED]**: Real-time traffic breakdown and monitoring interface.
+- **Stage 3 Bidirectional Flow Engine [IMPLEMENTED]**: Canonical 5-tuple flow state machine supporting IPv4/IPv6, observational TCP handshake/teardown/mid-stream tracking, UDP session accounting, per-flow bidirectional statistics, timestamp normalization, and deterministic idle-timeout eviction.
+- **Stage 4 Layer-7 Inspection [PLANNED]**: TLS 1.2/1.3 SNI extraction, HTTP `Host:` decoding, DNS query resolution.
+- **Stage 5 Policy & Rule Engine [PLANNED]**: High-speed filtering by IP, domain wildcard, application type, and transport port.
+- **Stage 6 Multi-threaded Pipeline [PLANNED]**: Consistent flow hashing across fast-path worker threads with lock-free statistics.
+- **Stage 7 FastAPI Telemetry Dashboard [PLANNED]**: Real-time traffic breakdown and monitoring interface.
 
 ---
 

@@ -65,13 +65,17 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Safety & Alignment**: Bounds-checked before every read or slice; explicit endian-aware byte deserialization (`read_u8`, `read_u16_be`, `read_u32_be`); zero struct `reinterpret_cast` avoiding unaligned pointer faults.
 - **Malformed Packet Handling**: Strict validation rejects truncated or corrupted headers with specific error codes (`ProtocolErrorCode`).
 
-### Stage 3: Flow Engine & State Tracking [PLANNED]
-- **Role**: Groups individual packets into bidirectional network conversations ("flows").
-- **Canonical 5-Tuple**: Normalizes `(src_ip, dst_ip, src_port, dst_port, protocol)` such that packets traveling in both directions map to the exact same hash bucket and worker thread.
-- **TCP State Machine**: Tracks TCP handshake flags (`SYN`, `SYN-ACK`, `ACK`, `FIN`, `RST`) and transitions flows between `NEW`, `ESTABLISHED`, `CLASSIFIED`, and `CLOSED`.
-- **Flow Eviction**: LRU and timeout-based eviction for inactive or terminated sessions.
+### Stage 3: Flow Engine & State Tracking [IMPLEMENTED]
+- **Role**: Groups individual packets into bidirectional network conversations ("flows") and tracks connection lifecycles and metrics.
+- **Canonical 5-Tuple Normalization**: Normalizes `(src_ip, src_port, dst_ip, dst_port, protocol)` via `FlowKey` and unified `IPAddress` (IPv4 and IPv6) such that forward and reverse traffic map deterministically to the exact same hash bucket.
+- **Observational TCP State Machine**: Robust observational tracking of connection handshakes (`SYN` $\to$ `SYN-ACK` $\to$ `ACK` $\to$ `ESTABLISHED`), data transfers, mid-stream pickups (packets observed without initial SYN), retransmissions, and teardown (`FIN` from either side, simultaneous FINs, and `RST` from any state).
+- **UDP Flow Tracking**: Seamless bidirectional session tracking and state transitions (`Active` $\to$ `Established`).
+- **Directional Metrics**: Per-flow forward and reverse counters for total packets, wire bytes, application payload bytes, first-seen/last-seen timestamps, and duration.
+- **Timestamp Normalization**: Uniform microsecond resolution (`normalize_timestamp_us`) handling both microsecond and nanosecond PCAP capture headers.
+- **Deterministic Eviction**: Idle expiration (`cleanup_expired`) with configurable protocol-specific timeouts (`FlowTimeoutConfig`) without background thread overhead.
+- **Zero-Copy & Memory Footprint**: Flow records (`FlowEntry`) track only metadata, metrics, and state machine transitions; raw packet payloads are never buffered.
 
-### Stage 4: Layer-7 Deep Packet Inspection (DPI)
+### Stage 4: Layer-7 Deep Packet Inspection (DPI) [PLANNED]
 - **TLS SNI Decoder**: Inspects the TLS Handshake Record (Content Type `0x16`, Handshake Type `0x01` ClientHello) and parses the Extension list for Server Name Indication (Type `0x0000`).
 - **HTTP Host Parser**: Case-insensitive parsing of `Host:` headers in cleartext HTTP/1.1 requests.
 - **DNS Decoder**: RFC 1035 wire-format decoder extracting queried domain names.
