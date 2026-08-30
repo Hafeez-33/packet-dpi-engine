@@ -55,7 +55,7 @@ packet-dpi-engine/
 
 ### 1. Build C++ Core and Test Suites
 ```bash
-# Configure build
+# Configure build (On Windows MinGW/MSYS2: cmake -G "MinGW Makefiles" -B build -S . -DPACKET_DPI_BUILD_BENCHMARKS=ON)
 cmake -B build -S . -DPACKET_DPI_BUILD_BENCHMARKS=ON
 
 # Build all binaries
