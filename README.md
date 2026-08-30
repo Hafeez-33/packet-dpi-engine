@@ -8,6 +8,7 @@ A high-performance, production-oriented **C++17 Deep Packet Inspection (DPI)** e
 
 ### Key Capabilities
 - **Modular Zero-Copy Architecture**: Protocol parsers (Ethernet, IPv4/IPv6, TCP, UDP) with safe bounds-checked slicing.
+- **Stage 1 PCAP Reader [IMPLEMENTED]**: Streaming RAII classic `.pcap` parser with native & byte-swapped endian support, validation, truncated stream safety, and configurable payload memory safety limits.
 - **Bidirectional Flow Engine**: Canonical 5-tuple flow state machine with TCP handshake tracking.
 - **Layer-7 Inspection**: TLS 1.2/1.3 SNI extraction, HTTP `Host:` decoding, DNS query resolution.
 - **Policy & Rule Engine**: High-speed filtering by IP, domain wildcard, application type, and transport port.

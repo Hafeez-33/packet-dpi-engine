@@ -7,9 +7,15 @@ target_link_libraries(unit_tests PRIVATE packet_dpi_core)
 packet_dpi_enable_warnings(unit_tests)
 
 add_test(NAME CoreVersionTest COMMAND unit_tests)
-if(WIN32)
-    set_tests_properties(CoreVersionTest PROPERTIES
-        ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
-    )
-endif()
+
+# PCAP Reader Unit Test Target
+add_executable(pcap_reader_test
+    pcap_reader_test.cpp
+)
+
+target_link_libraries(pcap_reader_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(pcap_reader_test)
+
+add_test(NAME PcapReaderTest COMMAND pcap_reader_test)
+
 

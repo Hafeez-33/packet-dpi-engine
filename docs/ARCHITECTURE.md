@@ -48,12 +48,12 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 
 ## 2. Component Breakdown & Design Principles
 
-### Stage 1: PCAP Reader
+### Stage 1: PCAP Reader [IMPLEMENTED]
 - **Role**: Reads standard `.pcap` capture streams in native or swapped byte order.
-- **Safety**: Strict validation of the 24-byte Global Header and 16-byte Packet Headers.
-- **Performance**: Large-buffer binary I/O without per-packet heap allocations.
+- **Safety**: Strict validation of the 24-byte Global Header and 16-byte Packet Headers, isolated version 2.4 validation, max packet memory limit.
+- **Performance**: Streaming RAII binary I/O.
 
-### Stage 2: L2/L3/L4 Protocol Parser
+### Stage 2: L2/L3/L4 Protocol Parser [PLANNED]
 - **Role**: Slices raw Ethernet frames, IPv4/IPv6 packets, and TCP/UDP transport segments.
 - **Safety**: Safe endian-aware deserialization (`PortableNet` / `std::endian`), strict offset arithmetic, and zero unaligned pointer casts.
 - **Payload Extraction**: Computes transport header lengths and provides `std::string_view` / byte spans for upper-layer inspection.
