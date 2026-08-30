@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -127,14 +128,9 @@ struct IPv4Address {
         return !(*this == other);
     }
 
-    std::string to_string() const {
-        std::ostringstream oss;
-        oss << static_cast<int>(bytes[0]) << "."
-            << static_cast<int>(bytes[1]) << "."
-            << static_cast<int>(bytes[2]) << "."
-            << static_cast<int>(bytes[3]);
-        return oss.str();
-    }
+    static std::optional<IPv4Address> from_string(std::string_view str) noexcept;
+
+    std::string to_string() const;
 };
 
 // 16-byte IPv6 Address
@@ -152,16 +148,9 @@ struct IPv6Address {
         return !(*this == other);
     }
 
-    std::string to_string() const {
-        std::ostringstream oss;
-        oss << std::hex;
-        for (size_t i = 0; i < 16; i += 2) {
-            if (i > 0) oss << ":";
-            uint16_t group = (static_cast<uint16_t>(bytes[i]) << 8) | bytes[i + 1];
-            oss << group;
-        }
-        return oss.str();
-    }
+    static std::optional<IPv6Address> from_string(std::string_view str) noexcept;
+
+    std::string to_string() const;
 };
 
 // Alignment-safe byte reading utilities from raw network stream

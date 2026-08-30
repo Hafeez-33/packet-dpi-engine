@@ -83,16 +83,27 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Bounded Per-Flow DPI Reassembly**: Operates a temporary, configurable reassembly buffer (default 8 KB) per flow to inspect fragmented or split application payloads across multi-packet TCP segments.
 - **Zero Memory Bloat & Fast-Path Optimization**: As soon as a flow is classified or the buffer limit is reached, temporary reassembly memory is immediately cleared and deallocated (`shrink_to_fit()`), storing only compact `L7Metadata`. Classified flows bypass DPI on subsequent packets.
 
-### Stage 5: Rule & Policy Engine [PLANNED]
-- **Role**: Evaluates traffic against configurable access control lists (ACLs).
-- **Rule Types**:
-  - Exact IP and CIDR subnet blocking
-  - Wildcard domain rules (e.g., `*.tiktok.com`, `ads.*.com`)
-  - Transport port blocking
-  - Application-level policy enforcement (e.g., block all `AppType::BitTorrent`)
-- **Concurreny**: Read-heavy optimizations with `std::shared_mutex` for dynamic rule updates.
+### Stage 5: Rule & Policy Engine [IMPLEMENTED]
+- **Role**: Evaluates traffic against configurable access control lists (ACLs) and security policies with deterministic priority-based resolution.
+- **Rule Matching Criteria**:
+  - **IPv4 / IPv6 Exact & CIDR Subnets** (`IpMatcher`): Zero heap allocation bitmask evaluation (`192.168.1.0/24`, `2001:db8::/32`).
+  - **Port Ranges & Lists** (`PortMatcher`): Single ports, ranges (`8000-8080`), and comma-separated lists (`80,443,8080`).
+  - **Case-Insensitive Domain Wildcards** (`DomainMatcher`): Exact domains, suffix wildcards (`*.tiktok.com`), and mid-pattern globs (`ads.*.com`) matching extracted TLS SNI, HTTP Host, or DNS QNAME.
+  - **Application Protocol Matching**: Matches supported L7 protocols (`TLS`, `HTTP`, `DNS`, `ANY`).
+- **Policy Actions & Verdicts**:
+  - Actions: `ALLOW`, `BLOCK`, `ALERT`, `LOG`.
+  - Configurable `default_action` (default: `ALLOW`).
+  - First-match deterministic evaluation sorted ascending by `priority` (lower numeric value = higher precedence), tie-broken by rule `id`.
+- **L3/L4 vs L7 Policy Lifecycle**:
+  - Provisional L3/L4 evaluation is performed upon flow creation.
+  - Final L7 policy evaluation is executed as soon as DPI extracts application metadata (SNI, Host, QNAME), seamlessly overriding provisional default ALLOW decisions with granular L7 domain/app BLOCK rules.
+- **Safe JSON Deserialization**:
+  - Supports both granular structured rule arrays and categorical ACL sections (`blocked_ips`, `blocked_domains`, `blocked_ports`, `blocked_apps`).
+  - Safe error recovery without exceptions or crashes on malformed inputs.
+- **Thread-Safety & Dynamic Reloads**:
+  - Const-correct rule evaluation with lock-free atomic snapshot swap (`std::shared_ptr<const CompiledRuleSet>`), preparing zero-contention evaluations for Stage 6 worker pipelines.
 
-### Stage 6: Multi-threaded Worker Pipeline
+### Stage 6: Multi-threaded Worker Pipeline [PLANNED]
 - **Architecture**: Ingestion $\rightarrow$ Load Balancer dispatchers $\rightarrow$ Fast-Path DPI worker threads $\rightarrow$ Output sink.
 - **Consistent Flow Pinning**: Consistent hashing of the canonical 5-tuple guarantees that all packets for a flow are processed sequentially by the exact same worker core, avoiding cross-thread flow table contention.
 - **Bounded Queues**: Thread-safe bounded queues with backpressure and graceful drain on termination.

@@ -1,5 +1,6 @@
 #include "dpi/dpi/dpi_engine.h"
 #include "dpi/flow/flow_table.h"
+#include "dpi/rules/rule_engine.h"
 
 namespace dpi {
 
@@ -18,7 +19,7 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
         return nullptr;
     }
 
-    // Only TCP and UDP transport protocols are tracked in Stage 3/4
+    // Only TCP and UDP transport protocols are tracked in Stage 3/4/5
     if (!packet.is_tcp() && !packet.is_udp()) {
         return nullptr;
     }
@@ -33,6 +34,10 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
     if (it == table_.end()) {
         entry = std::make_shared<FlowEntry>(key, dir, timestamp_us);
         entry->update(packet, dir, timestamp_us, wire_bytes);
+        if (rule_engine_) {
+            PolicyVerdict v = rule_engine_->evaluate_l3_l4(key);
+            entry->set_policy_verdict(v);
+        }
         table_.emplace(key, entry);
     } else {
         entry = it->second;
@@ -49,8 +54,16 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
                                                packet.tcp.dst_port);
             if (res.matched) {
                 entry->finalize_classification(res.metadata);
+                if (rule_engine_) {
+                    PolicyVerdict v = rule_engine_->evaluate_l7(key, entry->l7_metadata());
+                    entry->set_policy_verdict(v);
+                }
             } else if (entry->dpi_buffer_size() >= FlowEntry::DEFAULT_MAX_DPI_BUFFER_SIZE) {
                 entry->abandon_dpi();
+                if (rule_engine_ && !entry->has_final_verdict()) {
+                    PolicyVerdict v = rule_engine_->evaluate_l7(key, entry->l7_metadata());
+                    entry->set_policy_verdict(v);
+                }
             }
         } else if (packet.is_udp()) {
             DpiResult res = DpiEngine::inspect(packet.l7_payload,
@@ -59,8 +72,16 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
                                                packet.udp.dst_port);
             if (res.matched) {
                 entry->finalize_classification(res.metadata);
+                if (rule_engine_) {
+                    PolicyVerdict v = rule_engine_->evaluate_l7(key, entry->l7_metadata());
+                    entry->set_policy_verdict(v);
+                }
             } else {
                 entry->abandon_dpi();
+                if (rule_engine_ && !entry->has_final_verdict()) {
+                    PolicyVerdict v = rule_engine_->evaluate_l7(key, entry->l7_metadata());
+                    entry->set_policy_verdict(v);
+                }
             }
         }
     }

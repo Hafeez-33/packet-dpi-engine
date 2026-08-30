@@ -1,25 +1,58 @@
 {
   "version": "1.0",
-  "description": "Sample DPI Filter Rules Configuration",
-  "rules": {
-    "blocked_ips": [
-      "192.168.1.50",
-      "10.0.0.99"
-    ],
-    "blocked_domains": [
-      "*.tiktok.com",
-      "*.facebook.com",
-      "doubleclick.net"
-    ],
-    "blocked_apps": [
-      "YouTube",
-      "TikTok",
-      "BitTorrent"
-    ],
-    "blocked_ports": [
-      23,
-      445,
-      3389
-    ]
-  }
+  "description": "Production DPI Policy Rules Configuration",
+  "default_action": "ALLOW",
+  "rules": [
+    {
+      "id": 100,
+      "name": "Block Insecure Telnet",
+      "priority": 10,
+      "enabled": true,
+      "action": "BLOCK",
+      "dst_port": "23",
+      "protocol": "TCP"
+    },
+    {
+      "id": 101,
+      "name": "Block SMB & RDP Exposure",
+      "priority": 20,
+      "enabled": true,
+      "action": "BLOCK",
+      "dst_port": "445, 3389",
+      "protocol": "TCP"
+    },
+    {
+      "id": 102,
+      "name": "Block Known Malicious Subnet",
+      "priority": 30,
+      "enabled": true,
+      "action": "BLOCK",
+      "dst_ip": "198.51.100.0/24"
+    },
+    {
+      "id": 103,
+      "name": "Block Tracking & Ad Networks",
+      "priority": 40,
+      "enabled": true,
+      "action": "BLOCK",
+      "domain": "doubleclick.net"
+    },
+    {
+      "id": 104,
+      "name": "Block Social Video Platforms",
+      "priority": 50,
+      "enabled": true,
+      "action": "BLOCK",
+      "domain": "*.tiktok.com",
+      "app_protocol": "TLS"
+    },
+    {
+      "id": 105,
+      "name": "Alert on Cleartext HTTP Traffic",
+      "priority": 60,
+      "enabled": true,
+      "action": "ALERT",
+      "app_protocol": "HTTP"
+    }
+  ]
 }
