@@ -111,6 +111,43 @@ TelemetrySnapshot TelemetryCollector::capture_snapshot() const {
         });
     }
 
+    // Collect bounded security alerts across workers
+    for (const auto& w : workers) {
+        auto worker_alerts = w->get_alerts_snapshot();
+        for (auto& a : worker_alerts) {
+            snap.threat_stats.total_alerts_generated++;
+            switch (a.category) {
+                case ThreatCategory::PortScan:           snap.threat_stats.port_scan_alerts++; break;
+                case ThreatCategory::SynFlood:           snap.threat_stats.syn_flood_alerts++; break;
+                case ThreatCategory::DnsTunneling:
+                case ThreatCategory::DnsDgaAnomaly:      snap.threat_stats.dns_anomaly_alerts++; break;
+                case ThreatCategory::SqlInjection:
+                case ThreatCategory::DirectoryTraversal:
+                case ThreatCategory::SuspiciousUserAgent:
+                case ThreatCategory::CustomSignature:
+                default:                                 snap.threat_stats.signature_alerts++; break;
+            }
+
+            switch (a.severity) {
+                case AlertSeverity::Critical: snap.threat_stats.critical_alerts++; break;
+                case AlertSeverity::High:     snap.threat_stats.high_alerts++; break;
+                case AlertSeverity::Medium:   snap.threat_stats.medium_alerts++; break;
+                case AlertSeverity::Low:      snap.threat_stats.low_alerts++; break;
+                case AlertSeverity::Info:
+                default:                      snap.threat_stats.info_alerts++; break;
+            }
+
+            if (snap.alerts.size() < max_flows_) {
+                snap.alerts.push_back(std::move(a));
+            }
+        }
+    }
+
+    // Accumulate total dropped alerts count from atomic worker stats
+    for (const auto& ws : snap.worker_stats) {
+        snap.threat_stats.total_alerts_dropped += ws.threat_alerts_dropped;
+    }
+
     return snap;
 }
 

@@ -18,6 +18,11 @@
             verdict: 'ALL',
             search: ''
         },
+        alertFilters: {
+            severity: 'ALL',
+            category: 'ALL',
+            search: ''
+        },
         throughputHistory: [], // Array of { pps: number, mbps: number }
         maxHistoryPoints: 40,
         lastSnapshot: null
@@ -44,6 +49,14 @@
         kpiDpiRate: document.getElementById('kpi-dpi-rate'),
         kpiBlockedFlows: document.getElementById('kpi-blocked-flows'),
         kpiBlockedPackets: document.getElementById('kpi-blocked-packets'),
+        kpiThreatAlerts: document.getElementById('kpi-threat-alerts'),
+        kpiThreatDropped: document.getElementById('kpi-threat-dropped'),
+
+        // Alerts Table & Filters
+        filterAlertSearch: document.getElementById('filter-alert-search'),
+        filterAlertSeverity: document.getElementById('filter-alert-severity'),
+        filterAlertCategory: document.getElementById('filter-alert-category'),
+        alertsTbody: document.getElementById('alerts-tbody'),
 
         // Chart & Protocols
         sparklineSvg: document.getElementById('sparkline-svg'),
@@ -195,6 +208,13 @@
 
         elements.kpiBlockedFlows.textContent = formatNumber(po.blocked_flows);
         elements.kpiBlockedPackets.textContent = `${formatNumber(po.blocked_packets)} blocked packets`;
+
+        const tm = snapshot.threat_metrics || {};
+        const sev = tm.severity_breakdown || {};
+        if (elements.kpiThreatAlerts) {
+            elements.kpiThreatAlerts.textContent = formatNumber(tm.total_alerts_generated || 0);
+            elements.kpiThreatDropped.textContent = `${formatNumber(tm.total_alerts_dropped || 0)} dropped · ${formatNumber(sev.critical || 0)} crit`;
+        }
 
         // Update Sparkline History
         state.throughputHistory.push({
@@ -406,6 +426,65 @@
         elements.flowModal.classList.add('hidden');
     }
 
+    // Fetch and render Security Alerts Table
+    async function fetchAlerts() {
+        if (!elements.alertsTbody) return;
+        try {
+            const params = new URLSearchParams({
+                page: 1,
+                page_size: 50,
+                severity: state.alertFilters.severity,
+                category: state.alertFilters.category
+            });
+            if (state.alertFilters.search) {
+                params.append('search', state.alertFilters.search);
+            }
+
+            const res = await fetch(`/api/alerts?${params.toString()}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            renderAlertsTable(data.alerts || []);
+        } catch (err) {
+            console.warn('Error fetching alerts:', err);
+        }
+    }
+
+    function renderAlertsTable(alerts) {
+        if (!elements.alertsTbody) return;
+
+        if (alerts.length === 0) {
+            elements.alertsTbody.innerHTML = `<tr><td colspan="9" class="table-empty">No security threat alerts matching criteria.</td></tr>`;
+            return;
+        }
+
+        elements.alertsTbody.innerHTML = alerts.map(a => {
+            let sevBadgeClass = 'badge-info';
+            const s = (a.severity || 'INFO').toUpperCase();
+            if (s === 'CRITICAL') sevBadgeClass = 'badge-critical';
+            else if (s === 'HIGH') sevBadgeClass = 'badge-high';
+            else if (s === 'MEDIUM') sevBadgeClass = 'badge-medium';
+            else if (s === 'LOW') sevBadgeClass = 'badge-low';
+
+            const timeStr = a.timestamp_us > 0 ? new Date(a.timestamp_us / 1000).toLocaleTimeString() : '-';
+            const targetTuple = `${a.dst_ip}:${a.dst_port}`;
+            const snippet = a.matched_snippet ? `<span class="alert-snippet" title="${a.matched_snippet}">${a.matched_snippet}</span>` : '-';
+
+            return `
+                <tr>
+                    <td><span class="flow-tuple">#${a.alert_id}</span></td>
+                    <td><span class="flow-stats-col">${timeStr}</span></td>
+                    <td><span class="badge ${sevBadgeClass}">${a.severity}</span></td>
+                    <td><span class="badge-cat">${a.category}</span></td>
+                    <td><span style="font-weight: 600; color: #f1f5f9">${a.signature}</span></td>
+                    <td><span class="flow-tuple">${a.src_ip}</span></td>
+                    <td><span class="flow-tuple">${targetTuple}</span></td>
+                    <td><span style="color: var(--text-secondary); font-size: 0.75rem">${a.trigger_reason || a.description}</span></td>
+                    <td>${snippet}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
     // Polling Loop
     async function poll() {
         try {
@@ -415,6 +494,7 @@
                 updateMetrics(snapshot);
             }
             await fetchFlows();
+            await fetchAlerts();
         } catch (err) {
             console.warn('Polling error:', err);
             updateStatusBadge('NO_TELEMETRY');
@@ -473,6 +553,31 @@
             fetchFlows();
         }, 250);
     });
+
+    if (elements.filterAlertSeverity) {
+        elements.filterAlertSeverity.addEventListener('change', (e) => {
+            state.alertFilters.severity = e.target.value;
+            fetchAlerts();
+        });
+    }
+
+    if (elements.filterAlertCategory) {
+        elements.filterAlertCategory.addEventListener('change', (e) => {
+            state.alertFilters.category = e.target.value;
+            fetchAlerts();
+        });
+    }
+
+    if (elements.filterAlertSearch) {
+        let alertSearchTimeout;
+        elements.filterAlertSearch.addEventListener('input', (e) => {
+            clearTimeout(alertSearchTimeout);
+            alertSearchTimeout = setTimeout(() => {
+                state.alertFilters.search = e.target.value;
+                fetchAlerts();
+            }, 250);
+        });
+    }
 
     elements.btnPagePrev.addEventListener('click', () => {
         if (state.currentPage > 1) {

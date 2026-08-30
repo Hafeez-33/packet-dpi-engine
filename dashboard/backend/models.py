@@ -108,6 +108,37 @@ class RawFlowModel(BaseModel):
             duration_ms=self.duration_ms
         )
 
+class SeverityBreakdownModel(BaseModel):
+    critical: int = 0
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    info: int = 0
+
+class ThreatMetricsModel(BaseModel):
+    total_alerts_generated: int = 0
+    total_alerts_dropped: int = 0
+    port_scan_alerts: int = 0
+    syn_flood_alerts: int = 0
+    dns_anomaly_alerts: int = 0
+    signature_alerts: int = 0
+    severity_breakdown: SeverityBreakdownModel = Field(default_factory=SeverityBreakdownModel)
+
+class SecurityAlertModel(BaseModel):
+    alert_id: int = 0
+    timestamp_us: int = 0
+    severity: str = "MEDIUM"
+    category: str = "PORT_SCAN"
+    signature: str = ""
+    description: str = ""
+    src_ip: str = ""
+    dst_ip: str = ""
+    src_port: int = 0
+    dst_port: int = 0
+    transport: str = "TCP"
+    trigger_reason: str = ""
+    matched_snippet: str = ""
+
 class TelemetrySnapshotModel(BaseModel):
     engine_status: str = "NO_TELEMETRY"
     timestamp_ns: int = 0
@@ -117,8 +148,10 @@ class TelemetrySnapshotModel(BaseModel):
     protocols: ProtocolDistributionModel = Field(default_factory=ProtocolDistributionModel)
     policy: PolicyMetrics = Field(default_factory=PolicyMetrics)
     errors: ErrorsModel = Field(default_factory=ErrorsModel)
+    threat_metrics: ThreatMetricsModel = Field(default_factory=ThreatMetricsModel)
     workers: List[WorkerStatsModel] = Field(default_factory=list)
     flows: List[RawFlowModel] = Field(default_factory=list)
+    alerts: List[SecurityAlertModel] = Field(default_factory=list)
 
 class HealthResponse(BaseModel):
     status: str = "healthy"
@@ -134,3 +167,10 @@ class PaginatedFlowsResponse(BaseModel):
     page_size: int
     total_pages: int
     flows: List[FlowTelemetryModel]
+
+class PaginatedAlertsResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    alerts: List[SecurityAlertModel]

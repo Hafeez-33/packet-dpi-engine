@@ -6,10 +6,13 @@ namespace dpi {
 WorkerThread::WorkerThread(size_t id,
                            size_t queue_capacity,
                            const FlowTimeoutConfig& timeout_config,
-                           std::shared_ptr<RuleEngine> rule_engine) noexcept
+                           std::shared_ptr<RuleEngine> rule_engine,
+                           const ThreatConfig& threat_config) noexcept
     : id_(id),
       queue_(queue_capacity),
-      rule_engine_(std::move(rule_engine)) {
+      rule_engine_(std::move(rule_engine)),
+      threat_engine_(threat_config),
+      alert_buffer_(threat_config.max_alert_buffer_capacity) {
     flow_table_.set_timeout_config(timeout_config);
     if (rule_engine_) {
         flow_table_.set_rule_engine(rule_engine_);
@@ -44,6 +47,8 @@ void WorkerThread::join() {
 
 void WorkerThread::run() {
     PacketJob job;
+    std::vector<SecurityAlert> alerts_batch;
+    alerts_batch.reserve(8);
 
     while (queue_.pop(job)) {
         // Execute full bounds-checked protocol parsing worker-locally
@@ -70,6 +75,15 @@ void WorkerThread::run() {
             } else if (flow->policy_verdict().action == RuleAction::Alert) {
                 stats_.alert_packets.fetch_add(1, std::memory_order_relaxed);
             }
+
+            // Stage 8: Threat & Anomaly Inspection
+            alerts_batch.clear();
+            threat_engine_.inspect_packet(job.record, parsed, flow.get(), job.is_nanoseconds, alerts_batch);
+            for (auto& alert : alerts_batch) {
+                alert_buffer_.push(std::move(alert));
+                stats_.threat_alerts_generated.fetch_add(1, std::memory_order_relaxed);
+            }
+            stats_.threat_alerts_dropped.store(alert_buffer_.dropped_count(), std::memory_order_relaxed);
         } else {
             stats_.malformed_packets.fetch_add(1, std::memory_order_relaxed);
         }

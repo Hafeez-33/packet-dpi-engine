@@ -3,6 +3,7 @@
 
 #include "dpi/flow/flow_table.h"
 #include "dpi/packet/pcap_types.h"
+#include "dpi/threat/threat_config.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -17,6 +18,7 @@ struct WorkerConfig {
     size_t num_workers{0};                 // 0 = auto-detect hardware concurrency
     size_t queue_capacity{2048};           // Maximum queued packets per worker queue
     FlowTimeoutConfig timeout_config{};    // Configurable flow timeout settings
+    ThreatConfig threat_config{};          // Configurable Stage 8 threat detection settings
 };
 
 /**
@@ -40,6 +42,8 @@ struct WorkerStatsSnapshot {
     uint64_t alert_packets{0};
     uint64_t dpi_classified_flows{0};
     uint64_t malformed_packets{0};
+    uint64_t threat_alerts_generated{0};
+    uint64_t threat_alerts_dropped{0};
 };
 
 /**
@@ -55,6 +59,8 @@ struct alignas(64) WorkerStats {
     std::atomic<uint64_t> alert_packets{0};
     std::atomic<uint64_t> dpi_classified_flows{0};
     std::atomic<uint64_t> malformed_packets{0};
+    std::atomic<uint64_t> threat_alerts_generated{0};
+    std::atomic<uint64_t> threat_alerts_dropped{0};
 
     WorkerStats() = default;
 
@@ -66,7 +72,9 @@ struct alignas(64) WorkerStats {
             blocked_packets.load(std::memory_order_relaxed),
             alert_packets.load(std::memory_order_relaxed),
             dpi_classified_flows.load(std::memory_order_relaxed),
-            malformed_packets.load(std::memory_order_relaxed)
+            malformed_packets.load(std::memory_order_relaxed),
+            threat_alerts_generated.load(std::memory_order_relaxed),
+            threat_alerts_dropped.load(std::memory_order_relaxed)
         };
     }
 };
@@ -83,6 +91,8 @@ struct PipelineStats {
     uint64_t total_dpi_classified_flows{0};
     uint64_t total_malformed_packets{0};
     uint64_t unroutable_packets{0};
+    uint64_t total_threat_alerts_generated{0};
+    uint64_t total_threat_alerts_dropped{0};
     std::vector<WorkerStatsSnapshot> per_worker_stats{};
 };
 

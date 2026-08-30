@@ -135,3 +135,29 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
   - Responsive, dark-mode dashboard built with semantic HTML5 and CSS glassmorphism.
   - 1-second auto-polling with pause/resume toggle.
   - Dynamic SVG throughput trend chart, L4/L7 protocol distribution bars, multi-worker core monitoring cards, and interactive searchable flow table with click-to-inspect modal drawer.
+
+### Stage 8: Threat Detection & Network Anomaly Engine [IMPLEMENTED]
+- **Worker-Local Zero-Lock Threat Inspection**:
+  - Each worker thread owns an isolated instance of `ThreatEngine`, completely eliminating cross-thread locks and mutex contention on the packet fast path.
+  - Periodic deterministic cleanup occurs every 1,024 packets to enforce strict time-window boundaries and expire stale tracking state.
+- **Shannon Entropy & DNS Tunneling / DGA Detection** (`EntropyCalculator`, `DnsAnomalyDetector`):
+  - Allocation-free Shannon entropy calculator utilizing a 256-entry stack frequency table: $H(X) = -\sum_{i} P(x_i) \log_2 P(x_i)$.
+  - Evaluates extracted DNS QNAME strings for algorithmic randomness (DGA), oversized domain labels, excessive FQDN lengths, and abnormal dot nesting depths typical of DNS data exfiltration tunnels.
+- **Stateful TCP SYN Flood & Connection DoS Detection** (`SynFloodDetector`):
+  - 3-Way handshake aware detector tracking state transitions (`SYN` $\rightarrow$ `SYN-ACK` $\rightarrow$ `ACK`/`RST`/`FIN`).
+  - Differentiates completed handshakes from accumulating half-open connections and flags high-rate SYN burst floods.
+  - Memory-bounded tracking table with hard capacity limit ($N=4096$) and LRU eviction.
+- **Horizontal & Vertical Port Scan Anomaly Detection** (`PortScanDetector`):
+  - Tracks unique destination ports per source IP (vertical reconnaissance) and unique target IPs per destination port (horizontal subnet sweep).
+  - Sliding time-window evaluation with LRU eviction on table saturation ($N=4096$).
+- **Bounded Payload Signature Matcher** (`PayloadSignatureMatcher`):
+  - Substring scanner matching against payload slices, HTTP URIs, Host headers, and User-Agent strings.
+  - Built-in signatures for SQL Injection (`UNION SELECT`, `' OR 1=1`), Directory Traversal (`../`, `..\`, `/etc/passwd`), and automated penetration scanners (`sqlmap`, `nikto`, `masscan`, `gobuster`).
+  - Strictly bounds inspected payload lengths, maximum signatures ($N=256$), and pattern string lengths.
+- **Bounded Alert Ring Buffer** (`BoundedAlertBuffer`):
+  - Fixed-capacity circular ring buffer per worker preserving recent security alerts with zero uncontrolled heap allocations.
+  - Deterministic overflow behavior tracking total generated vs dropped alerts.
+- **Security Telemetry & Dashboard Integration**:
+  - REST endpoints `/api/alerts` (paginated, filtered, searchable) and `/api/alerts/summary` (severity breakdown).
+  - Live Security Alerts KPI counter and interactive threat alert table in the web dashboard UI with severity color badges and matched payload snippets.
+

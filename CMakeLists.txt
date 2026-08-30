@@ -69,6 +69,13 @@ add_library(packet_dpi_core
     src/pipeline/worker_pool.cpp
     src/telemetry/telemetry_types.cpp
     src/telemetry/telemetry_collector.cpp
+    src/threat/threat_types.cpp
+    src/threat/entropy_calculator.cpp
+    src/threat/port_scan_detector.cpp
+    src/threat/syn_flood_detector.cpp
+    src/threat/dns_anomaly_detector.cpp
+    src/threat/payload_signature_matcher.cpp
+    src/threat/threat_engine.cpp
 )
 
 target_include_directories(packet_dpi_core

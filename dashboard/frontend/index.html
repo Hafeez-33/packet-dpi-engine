@@ -122,6 +122,21 @@
                     <span id="kpi-blocked-packets" class="kpi-sub">0 blocked packets</span>
                 </div>
             </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-amber">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">SECURITY ALERTS</span>
+                    <span id="kpi-threat-alerts" class="kpi-value">0</span>
+                    <span id="kpi-threat-dropped" class="kpi-sub">0 dropped · 0 crit</span>
+                </div>
+            </div>
         </section>
 
         <!-- Main Dashboard Content Grid -->
@@ -238,6 +253,75 @@
                 <div class="card-body">
                     <div id="worker-grid" class="worker-grid">
                         <!-- Dynamic Worker Core Cards populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stage 8: Threat & Security Anomaly Alerts -->
+            <section class="grid-card full-width alert-card" id="alerts-section">
+                <div class="card-header table-header-flex">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <h2>Threat Detection & Security Anomaly Alerts</h2>
+                    </div>
+
+                    <div class="table-filters">
+                        <div class="search-box">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="filter-alert-search" placeholder="Search signature, IP, reason..." autocomplete="off">
+                        </div>
+
+                        <select id="filter-alert-severity" class="filter-select">
+                            <option value="ALL">Severity: All</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="LOW">LOW</option>
+                            <option value="INFO">INFO</option>
+                        </select>
+
+                        <select id="filter-alert-category" class="filter-select">
+                            <option value="ALL">Category: All</option>
+                            <option value="PORT_SCAN">Port Scan</option>
+                            <option value="SYN_FLOOD">SYN Flood</option>
+                            <option value="DNS_TUNNELING">DNS Tunneling</option>
+                            <option value="DNS_DGA_ANOMALY">DNS DGA Anomaly</option>
+                            <option value="SQL_INJECTION">SQL Injection</option>
+                            <option value="DIRECTORY_TRAVERSAL">Directory Traversal</option>
+                            <option value="SUSPICIOUS_USER_AGENT">Suspicious Scanner</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card-body no-padding">
+                    <div class="table-responsive">
+                        <table class="flows-table" id="alerts-table">
+                            <thead>
+                                <tr>
+                                    <th>ALERT ID</th>
+                                    <th>TIMESTAMP</th>
+                                    <th>SEVERITY</th>
+                                    <th>CATEGORY</th>
+                                    <th>SIGNATURE / RULE</th>
+                                    <th>SOURCE IP</th>
+                                    <th>TARGET IP:PORT</th>
+                                    <th>HEURISTIC / TRIGGER REASON</th>
+                                    <th>PAYLOAD SNIPPET</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-tbody">
+                                <tr>
+                                    <td colspan="9" class="table-empty">No security threat alerts triggered. System operating normally.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
