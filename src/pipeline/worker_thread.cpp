@@ -49,7 +49,7 @@ void WorkerThread::run() {
         // Execute full bounds-checked protocol parsing worker-locally
         ParsedPacket parsed = ProtocolParser::parse(job.record);
         if (!parsed.is_valid()) {
-            stats_.malformed_packets++;
+            stats_.malformed_packets.fetch_add(1, std::memory_order_relaxed);
             continue;
         }
 
@@ -57,31 +57,32 @@ void WorkerThread::run() {
         auto flow = flow_table_.process_packet(job.record, parsed, job.is_nanoseconds);
 
         if (flow != nullptr) {
-            stats_.packets_processed++;
+            stats_.packets_processed.fetch_add(1, std::memory_order_relaxed);
             size_t wire_len = (job.record.header.orig_len > 0) ? job.record.header.orig_len : job.record.payload.size();
-            stats_.bytes_processed += wire_len;
+            stats_.bytes_processed.fetch_add(wire_len, std::memory_order_relaxed);
 
             if (flow_table_.size() > prev_flow_count) {
-                stats_.flows_created++;
+                stats_.flows_created.fetch_add(1, std::memory_order_relaxed);
             }
 
             if (flow->is_blocked()) {
-                stats_.blocked_packets++;
+                stats_.blocked_packets.fetch_add(1, std::memory_order_relaxed);
             } else if (flow->policy_verdict().action == RuleAction::Alert) {
-                stats_.alert_packets++;
+                stats_.alert_packets.fetch_add(1, std::memory_order_relaxed);
             }
         } else {
-            stats_.malformed_packets++;
+            stats_.malformed_packets.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
     // Count classified flows upon completion
-    stats_.dpi_classified_flows = 0;
-    flow_table_.for_each_flow([this](const std::shared_ptr<FlowEntry>& f) {
+    uint64_t classified_count = 0;
+    flow_table_.for_each_flow([&classified_count](const std::shared_ptr<FlowEntry>& f) {
         if (f->is_classified()) {
-            stats_.dpi_classified_flows++;
+            classified_count++;
         }
     });
+    stats_.dpi_classified_flows.store(classified_count, std::memory_order_relaxed);
 }
 
 } // namespace dpi
