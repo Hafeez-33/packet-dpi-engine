@@ -58,11 +58,22 @@ packet_dpi_enable_warnings(rule_engine_test)
 
 add_test(NAME RuleEngineTest COMMAND rule_engine_test)
 
+# Multi-Threaded Worker Pipeline Unit Test Target
+add_executable(worker_pipeline_test
+    worker_pipeline_test.cpp
+)
+
+target_link_libraries(worker_pipeline_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(worker_pipeline_test)
+
+add_test(NAME WorkerPipelineTest COMMAND worker_pipeline_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()
+
 
 
 

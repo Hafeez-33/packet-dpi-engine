@@ -1,2 +1,6 @@
-# Benchmarks configuration (will contain microbenchmarks for parsing and flow lookup)
-# add_executable(packet_bench ... )
+add_executable(pipeline_benchmark
+    pipeline_benchmark.cpp
+)
+
+target_link_libraries(pipeline_benchmark PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(pipeline_benchmark)
