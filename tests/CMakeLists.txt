@@ -38,8 +38,18 @@ packet_dpi_enable_warnings(flow_tracking_test)
 
 add_test(NAME FlowTrackingTest COMMAND flow_tracking_test)
 
+# Layer-7 DPI Unit Test Target
+add_executable(dpi_test
+    dpi_test.cpp
+)
+
+target_link_libraries(dpi_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(dpi_test)
+
+add_test(NAME DpiTest COMMAND dpi_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()

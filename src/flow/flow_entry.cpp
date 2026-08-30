@@ -1,4 +1,5 @@
 #include "dpi/flow/flow_entry.h"
+#include <algorithm>
 
 namespace dpi {
 
@@ -6,6 +7,33 @@ FlowEntry::FlowEntry(const FlowKey& key, FlowDirection init_dir, uint64_t timest
     : key_(key), initial_direction_(init_dir), state_(FlowState::New) {
     stats_.first_seen_us = timestamp_us;
     stats_.last_seen_us = timestamp_us;
+}
+
+void FlowEntry::append_dpi_payload(std::string_view payload, size_t max_buffer_size) noexcept {
+    if (dpi_complete_ || payload.empty()) {
+        return;
+    }
+    size_t current_len = dpi_buffer_.size();
+    if (current_len >= max_buffer_size) {
+        abandon_dpi();
+        return;
+    }
+    size_t append_len = std::min<size_t>(payload.size(), max_buffer_size - current_len);
+    dpi_buffer_.append(payload.data(), append_len);
+}
+
+void FlowEntry::finalize_classification(const L7Metadata& meta) noexcept {
+    l7_meta_ = meta;
+    l7_meta_.is_classified = true;
+    dpi_complete_ = true;
+    dpi_buffer_.clear();
+    dpi_buffer_.shrink_to_fit();
+}
+
+void FlowEntry::abandon_dpi() noexcept {
+    dpi_complete_ = true;
+    dpi_buffer_.clear();
+    dpi_buffer_.shrink_to_fit();
 }
 
 void FlowEntry::update(const ParsedPacket& packet, FlowDirection dir,

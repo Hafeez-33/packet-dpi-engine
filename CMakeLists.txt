@@ -53,6 +53,11 @@ add_library(packet_dpi_core
     src/flow/tcp_state_machine.cpp
     src/flow/flow_entry.cpp
     src/flow/flow_table.cpp
+    src/dpi/l7_types.cpp
+    src/dpi/tls_parser.cpp
+    src/dpi/http_parser.cpp
+    src/dpi/dns_parser.cpp
+    src/dpi/dpi_engine.cpp
 )
 
 target_include_directories(packet_dpi_core

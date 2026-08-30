@@ -75,13 +75,15 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Deterministic Eviction**: Idle expiration (`cleanup_expired`) with configurable protocol-specific timeouts (`FlowTimeoutConfig`) without background thread overhead.
 - **Zero-Copy & Memory Footprint**: Flow records (`FlowEntry`) track only metadata, metrics, and state machine transitions; raw packet payloads are never buffered.
 
-### Stage 4: Layer-7 Deep Packet Inspection (DPI) [PLANNED]
-- **TLS SNI Decoder**: Inspects the TLS Handshake Record (Content Type `0x16`, Handshake Type `0x01` ClientHello) and parses the Extension list for Server Name Indication (Type `0x0000`).
-- **HTTP Host Parser**: Case-insensitive parsing of `Host:` headers in cleartext HTTP/1.1 requests.
-- **DNS Decoder**: RFC 1035 wire-format decoder extracting queried domain names.
-- **Classification Engine**: Maps extracted server names and protocols into a high-level application taxonomy (e.g., Google, YouTube, GitHub, Discord, Netflix).
+### Stage 4: Layer-7 Deep Packet Inspection (DPI) [IMPLEMENTED]
+- **Role**: Dissects application-layer transport payloads to identify protocols and extract hostnames, domains, and session metadata.
+- **TLS ClientHello & SNI Decoder**: Inspects TLS Record Layer (Content Type `0x16`, Handshake Type `0x01` ClientHello) across TLS 1.2 and TLS 1.3, navigating cipher suites, compression methods, and extensions to safely extract Server Name Indication (SNI, Type `0x0000`).
+- **HTTP/1.x Request Parser**: Parses textual request lines (`GET`, `POST`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`, `PATCH`, `CONNECT`, `TRACE`) and performs case-insensitive extraction and port-trimming of `Host:` headers bounded to the headers block.
+- **Cycle-Safe DNS Wire Parser**: RFC 1035 wire-format decoder extracting question section domain names (`QNAME`, `QTYPE`, `QCLASS`) with visited-offset cycle bitset detection, boundary checks, and a strict 5-jump limit to prevent malicious compression pointer loops.
+- **Bounded Per-Flow DPI Reassembly**: Operates a temporary, configurable reassembly buffer (default 8 KB) per flow to inspect fragmented or split application payloads across multi-packet TCP segments.
+- **Zero Memory Bloat & Fast-Path Optimization**: As soon as a flow is classified or the buffer limit is reached, temporary reassembly memory is immediately cleared and deallocated (`shrink_to_fit()`), storing only compact `L7Metadata`. Classified flows bypass DPI on subsequent packets.
 
-### Stage 5: Rule & Policy Engine
+### Stage 5: Rule & Policy Engine [PLANNED]
 - **Role**: Evaluates traffic against configurable access control lists (ACLs).
 - **Rule Types**:
   - Exact IP and CIDR subnet blocking

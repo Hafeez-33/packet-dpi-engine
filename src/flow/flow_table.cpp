@@ -1,3 +1,4 @@
+#include "dpi/dpi/dpi_engine.h"
 #include "dpi/flow/flow_table.h"
 
 namespace dpi {
@@ -17,7 +18,7 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
         return nullptr;
     }
 
-    // Only TCP and UDP transport protocols are tracked in Stage 3
+    // Only TCP and UDP transport protocols are tracked in Stage 3/4
     if (!packet.is_tcp() && !packet.is_udp()) {
         return nullptr;
     }
@@ -27,16 +28,44 @@ std::shared_ptr<FlowEntry> FlowTable::process_packet(const ParsedPacket& packet,
         return nullptr;
     }
 
+    std::shared_ptr<FlowEntry> entry;
     auto it = table_.find(key);
     if (it == table_.end()) {
-        auto entry = std::make_shared<FlowEntry>(key, dir, timestamp_us);
+        entry = std::make_shared<FlowEntry>(key, dir, timestamp_us);
         entry->update(packet, dir, timestamp_us, wire_bytes);
         table_.emplace(key, entry);
-        return entry;
+    } else {
+        entry = it->second;
+        entry->update(packet, dir, timestamp_us, wire_bytes);
     }
 
-    it->second->update(packet, dir, timestamp_us, wire_bytes);
-    return it->second;
+    // Layer-7 DPI Inspection for unclassified flows
+    if (!entry->is_dpi_complete() && packet.has_payload()) {
+        if (packet.is_tcp()) {
+            entry->append_dpi_payload(packet.l7_payload, FlowEntry::DEFAULT_MAX_DPI_BUFFER_SIZE);
+            DpiResult res = DpiEngine::inspect(entry->dpi_buffer(),
+                                               static_cast<uint8_t>(FlowProtocol::TCP),
+                                               packet.tcp.src_port,
+                                               packet.tcp.dst_port);
+            if (res.matched) {
+                entry->finalize_classification(res.metadata);
+            } else if (entry->dpi_buffer_size() >= FlowEntry::DEFAULT_MAX_DPI_BUFFER_SIZE) {
+                entry->abandon_dpi();
+            }
+        } else if (packet.is_udp()) {
+            DpiResult res = DpiEngine::inspect(packet.l7_payload,
+                                               static_cast<uint8_t>(FlowProtocol::UDP),
+                                               packet.udp.src_port,
+                                               packet.udp.dst_port);
+            if (res.matched) {
+                entry->finalize_classification(res.metadata);
+            } else {
+                entry->abandon_dpi();
+            }
+        }
+    }
+
+    return entry;
 }
 
 std::shared_ptr<FlowEntry> FlowTable::find_flow(const FlowKey& key) const {
