@@ -784,6 +784,39 @@ body {
     font-weight: 600;
 }
 
+/* Threat Alert Badges */
+.icon-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.badge-critical { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 700; }
+.badge-high { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.4); font-weight: 600; }
+.badge-medium { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4); }
+.badge-low { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+.badge-info { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
+
+.badge-cat {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.alert-snippet {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+
 /* Footer */
 .app-footer {
     text-align: center;

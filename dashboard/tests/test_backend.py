@@ -108,6 +108,53 @@ SAMPLE_SNAPSHOT = {
             "duration_ms": 10,
             "is_blocked": True
         }
+    ],
+    "threat_metrics": {
+        "total_alerts_generated": 3,
+        "total_alerts_dropped": 0,
+        "port_scan_alerts": 1,
+        "syn_flood_alerts": 1,
+        "dns_anomaly_alerts": 0,
+        "signature_alerts": 1,
+        "severity_breakdown": {
+            "critical": 1,
+            "high": 1,
+            "medium": 1,
+            "low": 0,
+            "info": 0
+        }
+    },
+    "alerts": [
+        {
+            "alert_id": 1,
+            "timestamp_us": 1600000000000000,
+            "severity": "CRITICAL",
+            "category": "SYN_FLOOD",
+            "signature": "TCP SYN Flood Detected",
+            "description": "Source IP accumulated 30 half-open connections",
+            "src_ip": "192.168.1.50",
+            "dst_ip": "10.0.0.1",
+            "src_port": 12345,
+            "dst_port": 80,
+            "transport": "TCP",
+            "trigger_reason": "SYN rate exceeded threshold",
+            "matched_snippet": ""
+        },
+        {
+            "alert_id": 2,
+            "timestamp_us": 1600000001000000,
+            "severity": "HIGH",
+            "category": "SQL_INJECTION",
+            "signature": "SQLi: UNION SELECT",
+            "description": "Matched SQL injection pattern",
+            "src_ip": "192.168.1.50",
+            "dst_ip": "10.0.0.2",
+            "src_port": 54321,
+            "dst_port": 8080,
+            "transport": "TCP",
+            "trigger_reason": "Pattern match 'UNION SELECT'",
+            "matched_snippet": "GET /search?q=1 UNION SELECT 1,2,3"
+        }
     ]
 }
 
@@ -211,3 +258,38 @@ def test_missing_and_corrupted_telemetry_file():
     assert res_corrupt.status_code == 200
     assert res_corrupt.json()["engine_status"] == "ENGINE_RUNNING"
     os.remove(corrupt_file)
+
+def test_alerts_endpoint():
+    res = client.get("/api/alerts")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 2
+    assert len(data["alerts"]) == 2
+
+    # Test severity filtering
+    res_crit = client.get("/api/alerts?severity=CRITICAL")
+    assert res_crit.status_code == 200
+    assert res_crit.json()["total"] == 1
+    assert res_crit.json()["alerts"][0]["severity"] == "CRITICAL"
+
+    # Test category filtering
+    res_sqli = client.get("/api/alerts?category=SQL_INJECTION")
+    assert res_sqli.status_code == 200
+    assert res_sqli.json()["total"] == 1
+    assert res_sqli.json()["alerts"][0]["category"] == "SQL_INJECTION"
+
+    # Test search
+    res_search = client.get("/api/alerts?search=half-open")
+    assert res_search.status_code == 200
+    assert res_search.json()["total"] == 1
+
+def test_alerts_summary_endpoint():
+    res = client.get("/api/alerts/summary")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_alerts_generated"] == 3
+    assert data["port_scan_alerts"] == 1
+    assert data["syn_flood_alerts"] == 1
+    assert data["signature_alerts"] == 1
+    assert data["severity_breakdown"]["critical"] == 1
+

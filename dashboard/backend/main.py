@@ -9,7 +9,10 @@ from .models import (
     TelemetrySnapshotModel,
     HealthResponse,
     PaginatedFlowsResponse,
-    FlowTelemetryModel
+    FlowTelemetryModel,
+    PaginatedAlertsResponse,
+    SecurityAlertModel,
+    ThreatMetricsModel
 )
 from .telemetry_service import TelemetryService
 
@@ -126,6 +129,27 @@ def get_flows(
         verdict=verdict,
         search=search
     )
+
+@app.get("/api/alerts", response_model=PaginatedAlertsResponse)
+def get_alerts(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    severity: Optional[str] = Query(None, description="Severity: ALL, CRITICAL, HIGH, MEDIUM, LOW, INFO"),
+    category: Optional[str] = Query(None, description="Threat category"),
+    search: Optional[str] = Query(None, description="Search keyword")
+):
+    return telemetry_service.get_paginated_alerts(
+        page=page,
+        page_size=page_size,
+        severity=severity,
+        category=category,
+        search=search
+    )
+
+@app.get("/api/alerts/summary")
+def get_alerts_summary():
+    s = telemetry_service.load_snapshot()
+    return s.threat_metrics
 
 @app.get("/api/flows/{flow_id}", response_model=FlowTelemetryModel)
 def get_flow_details(flow_id: str):

@@ -16,7 +16,7 @@ WorkerPool::WorkerPool(const WorkerConfig& config,
     workers_.reserve(count);
     for (size_t i = 0; i < count; ++i) {
         workers_.push_back(std::make_unique<WorkerThread>(
-            i, config_.queue_capacity, config_.timeout_config, rule_engine_));
+            i, config_.queue_capacity, config_.timeout_config, rule_engine_, config_.threat_config));
     }
 }
 
@@ -97,6 +97,8 @@ PipelineStats WorkerPool::get_aggregated_stats() const noexcept {
         total.total_alert_packets += snap.alert_packets;
         total.total_dpi_classified_flows += snap.dpi_classified_flows;
         total.total_malformed_packets += snap.malformed_packets;
+        total.total_threat_alerts_generated += snap.threat_alerts_generated;
+        total.total_threat_alerts_dropped += snap.threat_alerts_dropped;
         total.per_worker_stats.push_back(snap);
     }
 

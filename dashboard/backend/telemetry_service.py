@@ -2,7 +2,7 @@ import json
 import os
 import time
 from typing import Optional, Dict, Any, List
-from .models import TelemetrySnapshotModel, FlowTelemetryModel, PaginatedFlowsResponse
+from .models import TelemetrySnapshotModel, FlowTelemetryModel, PaginatedFlowsResponse, PaginatedAlertsResponse, SecurityAlertModel
 
 class TelemetryService:
     def __init__(self, default_file_path: str = "telemetry_snapshot.json"):
@@ -100,6 +100,52 @@ class TelemetryService:
             page_size=page_size,
             total_pages=total_pages,
             flows=paged_flows
+        )
+
+    def get_paginated_alerts(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        severity: Optional[str] = None,
+        category: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> PaginatedAlertsResponse:
+        snapshot = self.load_snapshot()
+        alerts = list(snapshot.alerts)
+
+        if severity and severity.upper() != "ALL":
+            alerts = [a for a in alerts if a.severity.upper() == severity.upper()]
+
+        if category and category.upper() != "ALL":
+            alerts = [a for a in alerts if a.category.upper() == category.upper()]
+
+        if search:
+            s = search.lower().strip()
+            alerts = [
+                a for a in alerts
+                if s in a.signature.lower()
+                or s in a.description.lower()
+                or s in a.src_ip.lower()
+                or s in a.dst_ip.lower()
+                or s in a.trigger_reason.lower()
+                or s in a.matched_snippet.lower()
+            ]
+
+        total = len(alerts)
+        page = max(1, page)
+        page_size = max(1, min(100, page_size))
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paged_alerts = alerts[start_idx:end_idx]
+
+        return PaginatedAlertsResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            alerts=paged_alerts
         )
 
     def get_flow_by_id(self, flow_id: str) -> Optional[FlowTelemetryModel]:

@@ -78,8 +78,18 @@ packet_dpi_enable_warnings(telemetry_test)
 
 add_test(NAME TelemetryTest COMMAND telemetry_test)
 
+# Threat Detection & Anomaly Unit Test Target
+add_executable(threat_test
+    threat_test.cpp
+)
+
+target_link_libraries(threat_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(threat_test)
+
+add_test(NAME ThreatTest COMMAND threat_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest ThreatTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()

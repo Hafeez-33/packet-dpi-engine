@@ -2,6 +2,7 @@
 #define DPI_TELEMETRY_TELEMETRY_TYPES_H
 
 #include "dpi/pipeline/pipeline_types.h"
+#include "dpi/threat/threat_types.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -85,12 +86,18 @@ struct TelemetrySnapshot {
     uint64_t malformed_packets{0};
     uint64_t unroutable_packets{0};
 
+    // Stage 8 Threat & Anomaly Metrics
+    ThreatStatsSnapshot threat_stats{};
+
     // Worker Pipeline Telemetry
     std::vector<WorkerStatsSnapshot> worker_stats{};
     std::vector<size_t> worker_queue_sizes{};
 
     // Bounded Flow Telemetry Sample
     std::vector<FlowTelemetry> flows{};
+
+    // Bounded Threat Alerts Sample
+    std::vector<SecurityAlert> alerts{};
 
     /**
      * @brief Serializes the telemetry snapshot to a valid, clean JSON string.

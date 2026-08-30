@@ -15,6 +15,7 @@ A high-performance, production-grade **C++17 Deep Packet Inspection (DPI)** engi
 | **Stage 5** | **Rule & Policy Engine** | **`COMPLETED`** | Priority-ordered JSON rule evaluator supporting IPv4/IPv6 CIDR subnets, port ranges, domain wildcards, and two-stage L3/L4 vs L7 verdicts. |
 | **Stage 6** | **Multi-Worker Pipeline** | **`COMPLETED`** | Multi-threaded producer-consumer architecture with zero-allocation flow routing, deterministic flow pinning, and worker-isolated tables. |
 | **Stage 7** | **Telemetry & Dashboard** | **`COMPLETED`** | Lock-free thread-safe snapshots, atomic JSON exports, REST API (FastAPI), and a modern dark-mode real-time web dashboard. |
+| **Stage 8** | **Threat & Anomaly Engine** | **`COMPLETED`** | Worker-local IDS heuristics: horizontal/vertical port scans, stateful SYN flood tracking, Shannon entropy DNS tunneling/DGA, bounded signature matcher, and ring buffer telemetry. |
 
 ---
 
@@ -31,16 +32,17 @@ packet-dpi-engine/
 │   ├── dpi/                    # Layer-7 DPI engines (TLS, HTTP, DNS)
 │   ├── rules/                  # Security policy and matcher engine
 │   ├── pipeline/               # Multi-worker threads and flow router
-│   └── telemetry/              # Lock-free telemetry collector & atomic JSON
+│   ├── telemetry/              # Lock-free telemetry collector & atomic JSON
+│   └── threat/                 # Stage 8 Threat & Anomaly detection engine
 ├── src/                        # C++ core implementations
-├── tests/                      # 8 CTest test suites (100% passing)
-├── benchmarks/                 # Pipeline & Telemetry microbenchmarks
-├── config/                     # Sample security policy rule configs
+├── tests/                      # 9 CTest test suites (100% passing)
+├── benchmarks/                 # Pipeline, Telemetry, and Threat benchmarks
+├── config/                     # Sample security policy & threat rules
 ├── scripts/                    # PCAP generators and test scripts
-├── dashboard/                  # Telemetry Dashboard
+├── dashboard/                  # Telemetry & Security Alerts Dashboard
 │   ├── backend/                # FastAPI REST API & safe JSON service
 │   ├── frontend/               # Semantic HTML5, CSS, and vanilla JS UI
-│   └── tests/                  # Backend pytest test suite (9 tests)
+│   └── tests/                  # Backend pytest test suite (11 tests)
 └── docs/                       # Architecture documentation
 ```
 
@@ -55,7 +57,7 @@ packet-dpi-engine/
 
 ### 1. Build C++ Core and Test Suites
 ```bash
-# Configure build
+# Configure build (On Windows MinGW/MSYS2: cmake -G "MinGW Makefiles" -B build -S . -DPACKET_DPI_BUILD_BENCHMARKS=ON)
 cmake -B build -S . -DPACKET_DPI_BUILD_BENCHMARKS=ON
 
 # Build all binaries
@@ -155,3 +157,5 @@ Rules are defined in standard JSON format (`config/sample_rules.json`):
 | `/api/workers` | `GET` | Multi-worker core throughput, queue depths, and load |
 | `/api/flows` | `GET` | Paginated flow records with searching and filtering |
 | `/api/flows/{flow_id}` | `GET` | Detailed bidirectional statistics for a single flow |
+| `/api/alerts` | `GET` | Paginated threat alerts with severity/category filtering and text search |
+| `/api/alerts/summary` | `GET` | Security alert counts, severity breakdown, and detector summary |
