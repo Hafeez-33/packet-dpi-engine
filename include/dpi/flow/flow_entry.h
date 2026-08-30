@@ -7,6 +7,7 @@
 #include "dpi/flow/flow_types.h"
 #include "dpi/flow/tcp_state_machine.h"
 #include "dpi/protocols/parsed_packet.h"
+#include "dpi/rules/rule_types.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -18,8 +19,8 @@ namespace dpi {
  * @brief Represents an active or completed network flow record in the flow table.
  * 
  * Stores canonical 5-tuple metadata, directional packet/byte statistics, timestamps,
- * TCP state, and classified Layer-7 metadata. Utilizes a temporary, bounded reassembly
- * buffer that is immediately released upon classification or timeout to ensure zero memory bloat.
+ * TCP state, classified Layer-7 metadata, and active PolicyVerdict. Utilizes a temporary,
+ * bounded reassembly buffer that is immediately released upon classification or timeout.
  */
 class FlowEntry {
 public:
@@ -39,6 +40,12 @@ public:
     bool is_dpi_complete() const noexcept { return dpi_complete_; }
     std::string_view dpi_buffer() const noexcept { return dpi_buffer_; }
     size_t dpi_buffer_size() const noexcept { return dpi_buffer_.size(); }
+
+    // Policy & Rule Engine Integration
+    const PolicyVerdict& policy_verdict() const noexcept { return policy_verdict_; }
+    bool is_blocked() const noexcept { return policy_verdict_.is_blocked(); }
+    bool has_final_verdict() const noexcept { return policy_verdict_.is_final; }
+    void set_policy_verdict(const PolicyVerdict& verdict) noexcept { policy_verdict_ = verdict; }
 
     /**
      * @brief Appends incoming payload to the temporary reassembly buffer up to max_buffer_size.
@@ -84,6 +91,9 @@ private:
     L7Metadata l7_meta_{};
     std::string dpi_buffer_{}; // Temporary bounded buffer
     bool dpi_complete_{false}; // True once classified or abandoned
+
+    // Policy & Rule Engine Verdict
+    PolicyVerdict policy_verdict_{};
 };
 
 } // namespace dpi

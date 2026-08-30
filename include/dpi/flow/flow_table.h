@@ -95,11 +95,16 @@ public:
     const FlowTimeoutConfig& timeout_config() const noexcept { return timeout_config_; }
     void set_timeout_config(const FlowTimeoutConfig& config) noexcept { timeout_config_ = config; }
 
+    // Rule & Policy Engine Integration
+    void set_rule_engine(std::shared_ptr<class RuleEngine> engine) noexcept { rule_engine_ = engine; }
+    std::shared_ptr<class RuleEngine> rule_engine() const noexcept { return rule_engine_; }
+
 private:
     uint64_t get_timeout_for_flow(const FlowEntry& entry) const noexcept;
 
     std::unordered_map<FlowKey, std::shared_ptr<FlowEntry>, FlowKeyHasher> table_{};
     FlowTimeoutConfig timeout_config_{};
+    std::shared_ptr<class RuleEngine> rule_engine_{nullptr};
 };
 
 } // namespace dpi

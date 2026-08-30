@@ -58,6 +58,12 @@ add_library(packet_dpi_core
     src/dpi/http_parser.cpp
     src/dpi/dns_parser.cpp
     src/dpi/dpi_engine.cpp
+    src/rules/rule_types.cpp
+    src/rules/ip_matcher.cpp
+    src/rules/port_matcher.cpp
+    src/rules/domain_matcher.cpp
+    src/rules/rule_parser.cpp
+    src/rules/rule_engine.cpp
 )
 
 target_include_directories(packet_dpi_core

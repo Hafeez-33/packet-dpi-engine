@@ -48,10 +48,21 @@ packet_dpi_enable_warnings(dpi_test)
 
 add_test(NAME DpiTest COMMAND dpi_test)
 
+# Rule & Policy Engine Unit Test Target
+add_executable(rule_engine_test
+    rule_engine_test.cpp
+)
+
+target_link_libraries(rule_engine_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(rule_engine_test)
+
+add_test(NAME RuleEngineTest COMMAND rule_engine_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()
+
 
 
