@@ -3,6 +3,7 @@
 
 #include "dpi/flow/flow_table.h"
 #include "dpi/packet/pcap_types.h"
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -29,10 +30,9 @@ struct PacketJob {
 };
 
 /**
- * @brief Per-worker execution statistics aligned to cache-line boundaries (64 bytes)
- * to avoid false sharing between concurrent worker cores.
+ * @brief Plain copyable snapshot of worker statistics for telemetry export and reporting.
  */
-struct alignas(64) WorkerStats {
+struct WorkerStatsSnapshot {
     uint64_t packets_processed{0};
     uint64_t bytes_processed{0};
     uint64_t flows_created{0};
@@ -40,6 +40,35 @@ struct alignas(64) WorkerStats {
     uint64_t alert_packets{0};
     uint64_t dpi_classified_flows{0};
     uint64_t malformed_packets{0};
+};
+
+/**
+ * @brief Per-worker execution statistics aligned to cache-line boundaries (64 bytes)
+ * to avoid false sharing. Uses atomic counters so telemetry collectors can safely
+ * read snapshot values without data races and without holding locks on the fast path.
+ */
+struct alignas(64) WorkerStats {
+    std::atomic<uint64_t> packets_processed{0};
+    std::atomic<uint64_t> bytes_processed{0};
+    std::atomic<uint64_t> flows_created{0};
+    std::atomic<uint64_t> blocked_packets{0};
+    std::atomic<uint64_t> alert_packets{0};
+    std::atomic<uint64_t> dpi_classified_flows{0};
+    std::atomic<uint64_t> malformed_packets{0};
+
+    WorkerStats() = default;
+
+    WorkerStatsSnapshot snapshot() const noexcept {
+        return WorkerStatsSnapshot{
+            packets_processed.load(std::memory_order_relaxed),
+            bytes_processed.load(std::memory_order_relaxed),
+            flows_created.load(std::memory_order_relaxed),
+            blocked_packets.load(std::memory_order_relaxed),
+            alert_packets.load(std::memory_order_relaxed),
+            dpi_classified_flows.load(std::memory_order_relaxed),
+            malformed_packets.load(std::memory_order_relaxed)
+        };
+    }
 };
 
 /**
@@ -54,7 +83,7 @@ struct PipelineStats {
     uint64_t total_dpi_classified_flows{0};
     uint64_t total_malformed_packets{0};
     uint64_t unroutable_packets{0};
-    std::vector<WorkerStats> per_worker_stats{};
+    std::vector<WorkerStatsSnapshot> per_worker_stats{};
 };
 
 } // namespace dpi

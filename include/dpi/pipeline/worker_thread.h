@@ -35,6 +35,7 @@ public:
     void join();
 
     size_t id() const noexcept { return id_; }
+    size_t queue_size() const noexcept { return queue_.size(); }
     const WorkerStats& stats() const noexcept { return stats_; }
     const FlowTable& flow_table() const noexcept { return flow_table_; }
 

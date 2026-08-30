@@ -55,6 +55,7 @@ public:
 
     size_t worker_count() const noexcept { return workers_.size(); }
     bool is_running() const noexcept { return running_; }
+    const std::vector<std::unique_ptr<WorkerThread>>& workers() const noexcept { return workers_; }
 
 private:
     WorkerConfig config_{};

@@ -68,8 +68,18 @@ packet_dpi_enable_warnings(worker_pipeline_test)
 
 add_test(NAME WorkerPipelineTest COMMAND worker_pipeline_test)
 
+# Telemetry & Dashboard Unit Test Target
+add_executable(telemetry_test
+    telemetry_test.cpp
+)
+
+target_link_libraries(telemetry_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(telemetry_test)
+
+add_test(NAME TelemetryTest COMMAND telemetry_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()

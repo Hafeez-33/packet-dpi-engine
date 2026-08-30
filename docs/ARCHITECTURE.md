@@ -1,6 +1,6 @@
 # System Architecture & Technical Specification
 
-The **Packet DPI Engine** is a high-throughput, multi-threaded C++17 Deep Packet Inspection (DPI) system designed for wire-speed network protocol analysis, flow reassembly, Layer-7 application classification, and rule-based traffic enforcement.
+The **Packet DPI Engine** is a high-throughput, multi-threaded C++17 Deep Packet Inspection (DPI) system designed for wire-speed network protocol analysis, flow reassembly, Layer-7 application classification, rule-based traffic enforcement, and real-time telemetry monitoring.
 
 ---
 
@@ -32,21 +32,21 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 ┌─────────────────┐
 │   Rule Engine   │  (Policy ACL: IP prefixes, wildcard domains, ports, applications)
 └────────┬────────┘
-         │ Action: FORWARD / DROP / LOG
+         │ Action: ALLOW / BLOCK / ALERT
          ▼
 ┌─────────────────┐
-│ Worker Pipeline │  (Consistent flow hashing, multi-core worker queues, output writer)
+│ Worker Pipeline │  (Consistent flow hashing, multi-core worker queues, isolated flow tables)
 └────────┬────────┘
-         │ Telemetry counters
+         │ Lock-free atomic snapshots & atomic JSON disk exports
          ▼
 ┌─────────────────┐
-│ Metrics & API   │  (Lock-free atomic metrics, Prometheus/JSON exporter, FastAPI Dashboard)
+│ Telemetry & UI  │  (FastAPI REST API, Polling sync, Real-time Dark Mode Web Dashboard)
 └─────────────────┘
 ```
 
 ---
 
-## 2. Component Breakdown & Design Principles
+## 2. Component Breakdown & Technical Specifications
 
 ### Stage 1: PCAP Reader [IMPLEMENTED]
 - **Role**: Reads standard `.pcap` capture streams in native or swapped byte order.
@@ -59,7 +59,7 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
   - **Ethernet II**: Destination/Source MAC addresses, EtherType dispatch (`0x0800` IPv4, `0x86DD` IPv6, with `0x0806` ARP etc. detected).
   - **IPv4**: Version, IHL, DSCP/ECN, total length, identification, control flags (DF, MF), fragment offset (in 8-byte units and bytes), TTL, protocol, checksum, 32-bit source/destination IP addresses, and IP header options slicing.
   - **IPv4 Fragmentation**: Flags and fragment offset are explicitly exposed. Initial fragments (`MF=1, offset=0`) parse L4 headers; non-initial fragments (`offset > 0`) are safely identified (`L4Type::IPv4Fragment`, `ProtocolErrorCode::IPv4FragmentedNonInitial`) and prevented from blind L4 parsing.
-  - **IPv6**: Base 40-byte header parsing (Version=6, Traffic Class, 20-bit Flow Label, Payload Length, Next Header, Hop Limit, 128-bit source/destination IP addresses). Direct Next Header TCP/UDP parsing supported. *(Note: Full IPv6 extension-header chain traversal is a documented limitation for a subsequent stage).*
+  - **IPv6**: Base 40-byte header parsing (Version=6, Traffic Class, 20-bit Flow Label, Payload Length, Next Header, Hop Limit, 128-bit source/destination IP addresses). Direct Next Header TCP/UDP parsing supported.
   - **TCP**: Source/destination ports, sequence and acknowledgment numbers, Data Offset (in 32-bit words), flags (FIN, SYN, RST, PSH, ACK, URG, ECE, CWR), window size, checksum, urgent pointer, TCP options slicing, and zero-copy L7 payload view.
   - **UDP**: Source/destination ports, length, checksum, and zero-copy L7 payload view.
 - **Safety & Alignment**: Bounds-checked before every read or slice; explicit endian-aware byte deserialization (`read_u8`, `read_u16_be`, `read_u32_be`); zero struct `reinterpret_cast` avoiding unaligned pointer faults.
@@ -88,7 +88,7 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Rule Matching Criteria**:
   - **IPv4 / IPv6 Exact & CIDR Subnets** (`IpMatcher`): Zero heap allocation bitmask evaluation (`192.168.1.0/24`, `2001:db8::/32`).
   - **Port Ranges & Lists** (`PortMatcher`): Single ports, ranges (`8000-8080`), and comma-separated lists (`80,443,8080`).
-  - **Case-Insensitive Domain Wildcards** (`DomainMatcher`): Exact domains, suffix wildcards (`*.tiktok.com`), and mid-pattern globs (`ads.*.com`) matching extracted TLS SNI, HTTP Host, or DNS QNAME.
+  - **Case-Insensitive Domain Wildcards** (`DomainMatcher`): Exact domains, suffix wildcards (`*.domain.com`), and mid-pattern globs (`ads.*.com`) matching extracted TLS SNI, HTTP Host, or DNS QNAME.
   - **Application Protocol Matching**: Matches supported L7 protocols (`TLS`, `HTTP`, `DNS`, `ANY`).
 - **Policy Actions & Verdicts**:
   - Actions: `ALLOW`, `BLOCK`, `ALERT`, `LOG`.
@@ -119,38 +119,19 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
   - Rule evaluation uses thread-safe lock-free atomic snapshot pointers (`std::shared_ptr<RuleEngine>`).
   - Worker statistics (`alignas(64) WorkerStats`) are cache-line aligned to eliminate false sharing.
 
-### Stage 7: Telemetry, Metrics & Dashboard [PLANNED]
-- **Lock-free Counters**: Atomic counters for total packets, total bytes, drops, forwards, protocol breakdown, and classification hits.
-- **FastAPI Integration**: REST API endpoint exposing live throughput and flow state to the web UI.
-
----
-
-## 3. Directory Layout
-
-```
-packet-dpi-engine/
-├── CMakeLists.txt
-├── README.md
-├── LICENSE
-├── .gitignore
-├── include/dpi/
-│   ├── packet/        # Raw packet representations & memory buffers
-│   ├── protocols/     # L2, L3, L4 protocol header decoders
-│   ├── flow/          # FiveTuple, FlowTable, FlowState
-│   ├── dpi/           # TLS SNI, HTTP, DNS decoders
-│   ├── rules/         # RuleEngine and ACL policies
-│   ├── pipeline/      # Thread queues, LoadBalancer, WorkerPool
-│   └── metrics/       # Atomic telemetry and counters
-├── src/
-│   ├── version.cpp
-│   └── main.cpp
-├── tests/
-│   ├── CMakeLists.txt
-│   └── main_test.cpp
-├── benchmarks/
-├── configs/
-│   └── rules_example.json
-├── docs/
-│   └── ARCHITECTURE.md
-└── dashboard/
-```
+### Stage 7: Telemetry & Dashboard [IMPLEMENTED]
+- **Thread-Safe Lock-Free Telemetry Collector** (`TelemetryCollector`):
+  - Fast-path workers record metrics into `alignas(64) std::atomic<uint64_t>` counters via relaxed atomic additions (`fetch_add(..., std::memory_order_relaxed)`).
+  - Snapshot captures query atomic loads and clone worker flow tables with bounded limits (`max_flows`), introducing zero global mutexes or pipeline halts.
+- **Atomic File Replacement Strategy**:
+  - Writes new telemetry to `<file>.tmp`, flushes and closes file stream, then calls cross-platform atomic replacement (`std::filesystem::copy_file` + remove), ensuring the FastAPI backend never reads partially written JSON.
+- **Finite PCAP Lifecycle States**:
+  - Supports `ENGINE_RUNNING`, `ENGINE_COMPLETED`, `ENGINE_ERROR`, and `NO_TELEMETRY`.
+  - Upon PCAP EOF, the engine exports final aggregated statistics and transitions to `ENGINE_COMPLETED` without fabricating artificial post-EOF traffic.
+- **FastAPI REST API Service**:
+  - High-performance asynchronous backend providing endpoints for health, metrics summary, protocol distribution, security policies, multi-core worker loads, and paginated flow searching.
+  - Tolerant of missing, empty, or concurrently replaced JSON files with graceful fallback.
+- **Interactive Web Dashboard**:
+  - Responsive, dark-mode dashboard built with semantic HTML5 and CSS glassmorphism.
+  - 1-second auto-polling with pause/resume toggle.
+  - Dynamic SVG throughput trend chart, L4/L7 protocol distribution bars, multi-worker core monitoring cards, and interactive searchable flow table with click-to-inspect modal drawer.
