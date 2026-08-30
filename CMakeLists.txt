@@ -64,6 +64,9 @@ add_library(packet_dpi_core
     src/rules/domain_matcher.cpp
     src/rules/rule_parser.cpp
     src/rules/rule_engine.cpp
+    src/pipeline/flow_router.cpp
+    src/pipeline/worker_thread.cpp
+    src/pipeline/worker_pool.cpp
 )
 
 target_include_directories(packet_dpi_core

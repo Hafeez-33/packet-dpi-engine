@@ -109,6 +109,13 @@ size_t FlowKeyHasher::operator()(const FlowKey& key) const noexcept {
         combine(p4);
     }
 
+    // 64-bit avalanche mixer for uniform distribution across worker queues
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdULL;
+    h ^= h >> 33;
+    h *= 0xc4ceb9fe1a85ec53ULL;
+    h ^= h >> 33;
+
     return static_cast<size_t>(h);
 }
 

@@ -103,12 +103,23 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Thread-Safety & Dynamic Reloads**:
   - Const-correct rule evaluation with lock-free atomic snapshot swap (`std::shared_ptr<const CompiledRuleSet>`), preparing zero-contention evaluations for Stage 6 worker pipelines.
 
-### Stage 6: Multi-threaded Worker Pipeline [PLANNED]
-- **Architecture**: Ingestion $\rightarrow$ Load Balancer dispatchers $\rightarrow$ Fast-Path DPI worker threads $\rightarrow$ Output sink.
-- **Consistent Flow Pinning**: Consistent hashing of the canonical 5-tuple guarantees that all packets for a flow are processed sequentially by the exact same worker core, avoiding cross-thread flow table contention.
-- **Bounded Queues**: Thread-safe bounded queues with backpressure and graceful drain on termination.
+### Stage 6: Multi-threaded Worker Pipeline [IMPLEMENTED]
+- **Architecture**: Ingestion Producer $\rightarrow$ Allocation-free Minimal Routing Parser $\rightarrow$ Canonical Flow Hashing $\rightarrow$ Bounded Worker Queues $\rightarrow$ Fast-Path Dedicated Worker Threads with Isolated `FlowTable`s.
+- **Zero-Allocation Routing Parse** (`FlowRouter`): Performs a minimal bounds-checked L2/L3/L4 parse on the producer thread to extract the canonical `FlowKey`, avoiding double parsing while leaving full `ProtocolParser` execution exclusively to worker threads.
+- **Strict Flow Affinity & Bidirectional Pinning**:
+  - Consistent hashing: `worker_index = FlowKeyHasher()(canonical_key) % num_workers`.
+  - Canonical normalization ensures forward and reverse packets produce the exact same 64-bit hash and map deterministically to the identical worker thread.
+  - Guarantees strict per-flow in-order packet processing without cross-thread lock contention.
+- **Bounded Queues & Backpressure** (`BoundedQueue<PacketJob>`):
+  - Thread-safe FIFO queue backed by mutex and condition variables with configurable capacity.
+  - Blocks producer on full queues, throttling ingestion to processing throughput.
+  - Safe shutdown and drain semantics guarantee zero packet loss on EOF or termination.
+- **Zero Mutex Contention Fast-Path**:
+  - Each `WorkerThread` owns an isolated, private `FlowTable`.
+  - Rule evaluation uses thread-safe lock-free atomic snapshot pointers (`std::shared_ptr<RuleEngine>`).
+  - Worker statistics (`alignas(64) WorkerStats`) are cache-line aligned to eliminate false sharing.
 
-### Stage 7: Telemetry, Metrics & Dashboard
+### Stage 7: Telemetry, Metrics & Dashboard [PLANNED]
 - **Lock-free Counters**: Atomic counters for total packets, total bytes, drops, forwards, protocol breakdown, and classification hits.
 - **FastAPI Integration**: REST API endpoint exposing live throughput and flow state to the web UI.
 
