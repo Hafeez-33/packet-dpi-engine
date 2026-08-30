@@ -1,0 +1,26 @@
+{
+  "default_action": "ALLOW",
+  "rules": [
+    {
+      "id": 1,
+      "name": "Block Malicious Port 8080",
+      "priority": 10,
+      "action": "BLOCK",
+      "dst_port": "8080"
+    },
+    {
+      "id": 2,
+      "name": "Block Malicious Domain",
+      "priority": 20,
+      "action": "BLOCK",
+      "domain": "*.badactor.org"
+    },
+    {
+      "id": 3,
+      "name": "Alert High Risk Subnet",
+      "priority": 50,
+      "action": "ALERT",
+      "dst_ip": "198.51.100.0/24"
+    }
+  ]
+}

@@ -67,6 +67,8 @@ add_library(packet_dpi_core
     src/pipeline/flow_router.cpp
     src/pipeline/worker_thread.cpp
     src/pipeline/worker_pool.cpp
+    src/telemetry/telemetry_types.cpp
+    src/telemetry/telemetry_collector.cpp
 )
 
 target_include_directories(packet_dpi_core

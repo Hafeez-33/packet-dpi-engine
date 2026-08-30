@@ -89,15 +89,15 @@ PipelineStats WorkerPool::get_aggregated_stats() const noexcept {
     total.per_worker_stats.reserve(workers_.size());
 
     for (const auto& worker : workers_) {
-        const auto& ws = worker->stats();
-        total.total_packets += ws.packets_processed;
-        total.total_bytes += ws.bytes_processed;
-        total.total_flows += ws.flows_created;
-        total.total_blocked_packets += ws.blocked_packets;
-        total.total_alert_packets += ws.alert_packets;
-        total.total_dpi_classified_flows += ws.dpi_classified_flows;
-        total.total_malformed_packets += ws.malformed_packets;
-        total.per_worker_stats.push_back(ws);
+        auto snap = worker->stats().snapshot();
+        total.total_packets += snap.packets_processed;
+        total.total_bytes += snap.bytes_processed;
+        total.total_flows += snap.flows_created;
+        total.total_blocked_packets += snap.blocked_packets;
+        total.total_alert_packets += snap.alert_packets;
+        total.total_dpi_classified_flows += snap.dpi_classified_flows;
+        total.total_malformed_packets += snap.malformed_packets;
+        total.per_worker_stats.push_back(snap);
     }
 
     return total;
