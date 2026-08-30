@@ -45,6 +45,7 @@ endfunction()
 # Core DPI Engine Library (will accumulate modular sources as we implement each phase)
 add_library(packet_dpi_core
     src/version.cpp
+    src/packet/pcap_reader.cpp
 )
 
 target_include_directories(packet_dpi_core
