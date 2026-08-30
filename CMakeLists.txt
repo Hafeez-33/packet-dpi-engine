@@ -46,6 +46,8 @@ endfunction()
 add_library(packet_dpi_core
     src/version.cpp
     src/packet/pcap_reader.cpp
+    src/protocols/protocol_types.cpp
+    src/protocols/protocol_parser.cpp
 )
 
 target_include_directories(packet_dpi_core
@@ -60,6 +62,10 @@ packet_dpi_enable_warnings(packet_dpi_core)
 # Threads support (required for pipeline workers)
 find_package(Threads REQUIRED)
 target_link_libraries(packet_dpi_core PUBLIC Threads::Threads)
+
+if(MINGW)
+    target_link_options(packet_dpi_core PUBLIC -static-libgcc -static-libstdc++)
+endif()
 
 # Main Executable Target
 add_executable(dpi_engine

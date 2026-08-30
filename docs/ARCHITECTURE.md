@@ -53,12 +53,19 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
 - **Safety**: Strict validation of the 24-byte Global Header and 16-byte Packet Headers, isolated version 2.4 validation, max packet memory limit.
 - **Performance**: Streaming RAII binary I/O.
 
-### Stage 2: L2/L3/L4 Protocol Parser [PLANNED]
-- **Role**: Slices raw Ethernet frames, IPv4/IPv6 packets, and TCP/UDP transport segments.
-- **Safety**: Safe endian-aware deserialization (`PortableNet` / `std::endian`), strict offset arithmetic, and zero unaligned pointer casts.
-- **Payload Extraction**: Computes transport header lengths and provides `std::string_view` / byte spans for upper-layer inspection.
+### Stage 2: L2/L3/L4 Protocol Parser [IMPLEMENTED]
+- **Role**: Slices raw Ethernet frames, IPv4/IPv6 packets, and TCP/UDP transport segments into a canonical `ParsedPacket`.
+- **Supported Protocols**:
+  - **Ethernet II**: Destination/Source MAC addresses, EtherType dispatch (`0x0800` IPv4, `0x86DD` IPv6, with `0x0806` ARP etc. detected).
+  - **IPv4**: Version, IHL, DSCP/ECN, total length, identification, control flags (DF, MF), fragment offset (in 8-byte units and bytes), TTL, protocol, checksum, 32-bit source/destination IP addresses, and IP header options slicing.
+  - **IPv4 Fragmentation**: Flags and fragment offset are explicitly exposed. Initial fragments (`MF=1, offset=0`) parse L4 headers; non-initial fragments (`offset > 0`) are safely identified (`L4Type::IPv4Fragment`, `ProtocolErrorCode::IPv4FragmentedNonInitial`) and prevented from blind L4 parsing.
+  - **IPv6**: Base 40-byte header parsing (Version=6, Traffic Class, 20-bit Flow Label, Payload Length, Next Header, Hop Limit, 128-bit source/destination IP addresses). Direct Next Header TCP/UDP parsing supported. *(Note: Full IPv6 extension-header chain traversal is a documented limitation for a subsequent stage).*
+  - **TCP**: Source/destination ports, sequence and acknowledgment numbers, Data Offset (in 32-bit words), flags (FIN, SYN, RST, PSH, ACK, URG, ECE, CWR), window size, checksum, urgent pointer, TCP options slicing, and zero-copy L7 payload view.
+  - **UDP**: Source/destination ports, length, checksum, and zero-copy L7 payload view.
+- **Safety & Alignment**: Bounds-checked before every read or slice; explicit endian-aware byte deserialization (`read_u8`, `read_u16_be`, `read_u32_be`); zero struct `reinterpret_cast` avoiding unaligned pointer faults.
+- **Malformed Packet Handling**: Strict validation rejects truncated or corrupted headers with specific error codes (`ProtocolErrorCode`).
 
-### Stage 3: Flow Engine & State Tracking
+### Stage 3: Flow Engine & State Tracking [PLANNED]
 - **Role**: Groups individual packets into bidirectional network conversations ("flows").
 - **Canonical 5-Tuple**: Normalizes `(src_ip, dst_ip, src_port, dst_port, protocol)` such that packets traveling in both directions map to the exact same hash bucket and worker thread.
 - **TCP State Machine**: Tracks TCP handshake flags (`SYN`, `SYN-ACK`, `ACK`, `FIN`, `RST`) and transitions flows between `NEW`, `ESTABLISHED`, `CLASSIFIED`, and `CLOSED`.
