@@ -24,6 +24,9 @@ The **Packet DPI Engine** is a multi-threaded network traffic analysis and intru
 
 Traffic flows deterministically through the 9-stage modular pipeline:
 
+![Packet DPI Engine Architecture](docs/images/architecture.png)
+*High-level architectural pipeline of the Packet DPI Engine across Stages 1–9, illustrating offline PCAP ingestion, bounds-checked parsing, deterministic worker flow affinity, worker-local state machines, threat & behavioral risk engines, and atomic lock-free telemetry snapshots.*
+
 ```mermaid
 flowchart LR
     A[PCAP Ingestion] --> B[L2/L3/L4 Parser]
