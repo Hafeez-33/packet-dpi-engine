@@ -99,7 +99,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(packet_dpi_core PUBLIC Threads::Threads)
 
 if(MINGW)
-    target_link_options(packet_dpi_core PUBLIC -static-libgcc -static-libstdc++)
+    target_link_options(packet_dpi_core PUBLIC -static -static-libgcc -static-libstdc++)
 endif()
 
 # Main Executable Target

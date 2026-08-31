@@ -1,3 +1,10 @@
+# Ensure assert() statements in test targets are always active in all build configurations (including Release)
+if(MSVC)
+    add_compile_options(/UNDEBUG)
+else()
+    add_compile_options(-UNDEBUG)
+endif()
+
 # Minimal test runner target
 add_executable(unit_tests
     main_test.cpp
@@ -97,12 +104,6 @@ target_link_libraries(risk_test PRIVATE packet_dpi_core)
 packet_dpi_enable_warnings(risk_test)
 
 add_test(NAME RiskTest COMMAND risk_test)
-
-if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest ThreatTest RiskTest
-        PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
-    )
-endif()
 
 
 
