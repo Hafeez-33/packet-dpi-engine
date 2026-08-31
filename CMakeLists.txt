@@ -45,6 +45,44 @@ endfunction()
 # Core DPI Engine Library (will accumulate modular sources as we implement each phase)
 add_library(packet_dpi_core
     src/version.cpp
+    src/packet/pcap_reader.cpp
+    src/protocols/protocol_types.cpp
+    src/protocols/protocol_parser.cpp
+    src/flow/ip_address.cpp
+    src/flow/flow_key.cpp
+    src/flow/tcp_state_machine.cpp
+    src/flow/flow_entry.cpp
+    src/flow/flow_table.cpp
+    src/dpi/l7_types.cpp
+    src/dpi/tls_parser.cpp
+    src/dpi/http_parser.cpp
+    src/dpi/dns_parser.cpp
+    src/dpi/dpi_engine.cpp
+    src/rules/rule_types.cpp
+    src/rules/ip_matcher.cpp
+    src/rules/port_matcher.cpp
+    src/rules/domain_matcher.cpp
+    src/rules/rule_parser.cpp
+    src/rules/rule_engine.cpp
+    src/pipeline/flow_router.cpp
+    src/pipeline/worker_thread.cpp
+    src/pipeline/worker_pool.cpp
+    src/telemetry/telemetry_types.cpp
+    src/telemetry/telemetry_collector.cpp
+    src/threat/threat_types.cpp
+    src/threat/entropy_calculator.cpp
+    src/threat/port_scan_detector.cpp
+    src/threat/syn_flood_detector.cpp
+    src/threat/dns_anomaly_detector.cpp
+    src/threat/payload_signature_matcher.cpp
+    src/threat/threat_engine.cpp
+    src/risk/risk_types.cpp
+    src/risk/behavioral_profiler.cpp
+    src/risk/beaconing_detector.cpp
+    src/risk/exfiltration_detector.cpp
+    src/risk/risk_scorer.cpp
+    src/risk/host_risk_profiler.cpp
+    src/risk/risk_engine.cpp
 )
 
 target_include_directories(packet_dpi_core
@@ -59,6 +97,10 @@ packet_dpi_enable_warnings(packet_dpi_core)
 # Threads support (required for pipeline workers)
 find_package(Threads REQUIRED)
 target_link_libraries(packet_dpi_core PUBLIC Threads::Threads)
+
+if(MINGW)
+    target_link_options(packet_dpi_core PUBLIC -static-libgcc -static-libstdc++)
+endif()
 
 # Main Executable Target
 add_executable(dpi_engine

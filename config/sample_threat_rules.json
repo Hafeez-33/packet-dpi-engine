@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "threat_detection": {
+    "enabled": true,
+    "port_scan": {
+      "enabled": true,
+      "horizontal_threshold": 20,
+      "vertical_threshold": 15,
+      "window_seconds": 5
+    },
+    "syn_flood": {
+      "enabled": true,
+      "half_open_threshold": 50,
+      "syn_rate_threshold": 100,
+      "window_seconds": 2,
+      "half_open_timeout_seconds": 5
+    },
+    "dns_anomaly": {
+      "enabled": true,
+      "max_entropy": 4.1,
+      "max_label_length": 45,
+      "max_fqdn_length": 180,
+      "max_subdomain_depth": 5
+    },
+    "signatures": [
+      {
+        "id": "SIG-SQLI-001",
+        "name": "SQL Injection UNION SELECT",
+        "category": "SQL_INJECTION",
+        "severity": "HIGH",
+        "pattern": "UNION SELECT"
+      },
+      {
+        "id": "SIG-SQLI-002",
+        "name": "SQL Injection OR 1=1",
+        "category": "SQL_INJECTION",
+        "severity": "HIGH",
+        "pattern": "' OR 1=1"
+      },
+      {
+        "id": "SIG-TRAV-001",
+        "name": "Directory Path Traversal ../",
+        "category": "DIRECTORY_TRAVERSAL",
+        "severity": "HIGH",
+        "pattern": "../.."
+      },
+      {
+        "id": "SIG-SCAN-001",
+        "name": "Vulnerability Scanner Masscan",
+        "category": "SUSPICIOUS_USER_AGENT",
+        "severity": "MEDIUM",
+        "pattern": "masscan"
+      }
+    ]
+  }
+}

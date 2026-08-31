@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet DPI Engine — Real-Time Telemetry & Security Dashboard</title>
+    <meta name="description" content="High-performance Layer-7 Deep Packet Inspection & Security Policy Engine Telemetry Dashboard">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-logo">
+                    <div class="logo-pulse"></div>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div class="brand-titles">
+                    <h1 class="brand-name">PACKET DPI ENGINE</h1>
+                    <span class="brand-tag">Stage 7 High-Throughput Core</span>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <div id="engine-status-badge" class="status-badge status-waiting">
+                    <span class="status-dot"></span>
+                    <span id="engine-status-text" class="status-label">INITIALIZING...</span>
+                </div>
+
+                <div class="polling-control-group">
+                    <button id="btn-toggle-poll" class="btn btn-control" title="Pause / Resume Real-Time Polling">
+                        <svg id="poll-icon-pause" class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="4" width="4" height="16"></rect>
+                            <rect x="14" y="4" width="4" height="16"></rect>
+                        </svg>
+                        <svg id="poll-icon-play" class="icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span id="poll-btn-label">Live Sync</span>
+                    </button>
+                    <button id="btn-refresh-now" class="btn btn-icon" title="Refresh Now">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- KPI Summary Ribbon -->
+        <section class="kpi-ribbon" id="kpi-ribbon">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-cyan">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">TOTAL PACKETS</span>
+                    <span id="kpi-total-packets" class="kpi-value">0</span>
+                    <span id="kpi-pps" class="kpi-sub">0.0 kpkts/s</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-purple">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">THROUGHPUT</span>
+                    <span id="kpi-throughput" class="kpi-value">0.00 MB</span>
+                    <span id="kpi-mbps" class="kpi-sub">0.00 MB/s</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-emerald">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">TRACKED FLOWS</span>
+                    <span id="kpi-total-flows" class="kpi-value">0</span>
+                    <span id="kpi-active-flows" class="kpi-sub">0 active · 0 completed</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">L7 DPI CLASSIFIED</span>
+                    <span id="kpi-dpi-classified" class="kpi-value">0</span>
+                    <span id="kpi-dpi-rate" class="kpi-sub">0.0% coverage</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-rose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">POLICY BLOCKS</span>
+                    <span id="kpi-blocked-flows" class="kpi-value">0</span>
+                    <span id="kpi-blocked-packets" class="kpi-sub">0 blocked packets</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-amber">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">SECURITY ALERTS</span>
+                    <span id="kpi-threat-alerts" class="kpi-value">0</span>
+                    <span id="kpi-threat-dropped" class="kpi-sub">0 dropped · 0 crit</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-crimson">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="kpi-data">
+                    <span class="kpi-label">HIGH/CRIT RISK FLOWS</span>
+                    <span id="kpi-risk-high" class="kpi-value">0</span>
+                    <span id="kpi-risk-sub" class="kpi-sub">0 beacon · 0 exfil</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Content Grid -->
+        <main class="dashboard-grid">
+            <!-- Left Column: Real-Time Charts & Analytics -->
+            <section class="grid-card chart-card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                        <h2>Packet & Wire Rate Telemetry</h2>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="legend-item"><span class="legend-color legend-cyan"></span> kpkts/s</span>
+                        <span class="legend-item"><span class="legend-color legend-violet"></span> MB/s</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="sparkline-container" id="sparkline-container">
+                        <svg id="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 600 160"></svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Column: Protocol & Layer-7 Distribution -->
+            <section class="grid-card protocol-card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                            <path d="M2 12h20"></path>
+                        </svg>
+                        <h2>Protocol Breakdown & Taxonomy</h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="proto-breakdown-group">
+                        <h3 class="group-title">Layer-4 Transport</h3>
+                        <div class="progress-bar-wrap">
+                            <div id="bar-proto-tcp" class="prog-bar prog-tcp" style="width: 0%" title="TCP"></div>
+                            <div id="bar-proto-udp" class="prog-bar prog-udp" style="width: 0%" title="UDP"></div>
+                            <div id="bar-proto-other" class="prog-bar prog-other" style="width: 0%" title="Other"></div>
+                        </div>
+                        <div class="proto-legend-list">
+                            <div class="proto-item">
+                                <span class="badge badge-tcp">TCP</span>
+                                <span id="val-proto-tcp" class="proto-count">0</span>
+                            </div>
+                            <div class="proto-item">
+                                <span class="badge badge-udp">UDP</span>
+                                <span id="val-proto-udp" class="proto-count">0</span>
+                            </div>
+                            <div class="proto-item">
+                                <span class="badge badge-gray">Other</span>
+                                <span id="val-proto-other" class="proto-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="proto-breakdown-group">
+                        <h3 class="group-title">Layer-7 Application Protocols</h3>
+                        <div class="l7-grid">
+                            <div class="l7-item">
+                                <div class="l7-badge-wrap">
+                                    <span class="badge badge-tls">TLS / HTTPS</span>
+                                    <span id="val-l7-tls" class="l7-val">0</span>
+                                </div>
+                                <div class="mini-prog"><div id="mini-bar-tls" class="mini-prog-fill fill-tls" style="width: 0%"></div></div>
+                            </div>
+                            <div class="l7-item">
+                                <div class="l7-badge-wrap">
+                                    <span class="badge badge-http">HTTP/1.x</span>
+                                    <span id="val-l7-http" class="l7-val">0</span>
+                                </div>
+                                <div class="mini-prog"><div id="mini-bar-http" class="mini-prog-fill fill-http" style="width: 0%"></div></div>
+                            </div>
+                            <div class="l7-item">
+                                <div class="l7-badge-wrap">
+                                    <span class="badge badge-dns">DNS</span>
+                                    <span id="val-l7-dns" class="l7-val">0</span>
+                                </div>
+                                <div class="mini-prog"><div id="mini-bar-dns" class="mini-prog-fill fill-dns" style="width: 0%"></div></div>
+                            </div>
+                            <div class="l7-item">
+                                <div class="l7-badge-wrap">
+                                    <span class="badge badge-unknown">Unknown L7</span>
+                                    <span id="val-l7-unknown" class="l7-val">0</span>
+                                </div>
+                                <div class="mini-prog"><div id="mini-bar-unknown" class="mini-prog-fill fill-unknown" style="width: 0%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Worker Thread Pipeline Core Grid -->
+            <section class="grid-card full-width worker-card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                        </svg>
+                        <h2>Multi-Worker Pipeline Cores & Load Balancing</h2>
+                    </div>
+                    <span id="worker-count-badge" class="badge badge-cyan">0 Worker Threads</span>
+                </div>
+                <div class="card-body">
+                    <div id="worker-grid" class="worker-grid">
+                        <!-- Dynamic Worker Core Cards populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stage 8: Threat & Security Anomaly Alerts -->
+            <section class="grid-card full-width alert-card" id="alerts-section">
+                <div class="card-header table-header-flex">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <h2>Threat Detection & Security Anomaly Alerts</h2>
+                    </div>
+
+                    <div class="table-filters">
+                        <div class="search-box">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="filter-alert-search" placeholder="Search signature, IP, reason..." autocomplete="off">
+                        </div>
+
+                        <select id="filter-alert-severity" class="filter-select">
+                            <option value="ALL">Severity: All</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="LOW">LOW</option>
+                            <option value="INFO">INFO</option>
+                        </select>
+
+                        <select id="filter-alert-category" class="filter-select">
+                            <option value="ALL">Category: All</option>
+                            <option value="PORT_SCAN">Port Scan</option>
+                            <option value="SYN_FLOOD">SYN Flood</option>
+                            <option value="DNS_TUNNELING">DNS Tunneling</option>
+                            <option value="DNS_DGA_ANOMALY">DNS DGA Anomaly</option>
+                            <option value="SQL_INJECTION">SQL Injection</option>
+                            <option value="DIRECTORY_TRAVERSAL">Directory Traversal</option>
+                            <option value="SUSPICIOUS_USER_AGENT">Suspicious Scanner</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card-body no-padding">
+                    <div class="table-responsive">
+                        <table class="flows-table" id="alerts-table">
+                            <thead>
+                                <tr>
+                                    <th>ALERT ID</th>
+                                    <th>TIMESTAMP</th>
+                                    <th>SEVERITY</th>
+                                    <th>CATEGORY</th>
+                                    <th>SIGNATURE / RULE</th>
+                                    <th>SOURCE IP</th>
+                                    <th>TARGET IP:PORT</th>
+                                    <th>HEURISTIC / TRIGGER REASON</th>
+                                    <th>PAYLOAD SNIPPET</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-tbody">
+                                <tr>
+                                    <td colspan="9" class="table-empty">No security threat alerts triggered. System operating normally.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stage 9: Behavioral Traffic Profiling & Host Risk Posture -->
+            <section class="grid-card full-width risk-card" id="risk-section">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <h2>Flow Risk Scoring & Behavioral Host Posture (NTA)</h2>
+                    </div>
+                    <div class="risk-summary-badges">
+                        <span class="badge badge-risk-crit" id="badge-risk-crit">0 Critical</span>
+                        <span class="badge badge-risk-high" id="badge-risk-high">0 High</span>
+                        <span class="badge badge-risk-med" id="badge-risk-med">0 Medium</span>
+                        <span class="badge badge-risk-low" id="badge-risk-low">0 Low</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="host-risk-grid">
+                        <div class="host-risk-table-wrap">
+                            <h3 class="group-title">Top Risky Hosts (Bounded LRU Tracker)</h3>
+                            <div class="table-responsive">
+                                <table class="flows-table" id="hosts-table">
+                                    <thead>
+                                        <tr>
+                                            <th>HOST IP</th>
+                                            <th>MAX RISK</th>
+                                            <th>TOTAL FLOWS</th>
+                                            <th>HIGH/CRIT FLOWS</th>
+                                            <th>BEHAVIORAL FLAGS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="hosts-tbody">
+                                        <tr>
+                                            <td colspan="5" class="table-empty">No risky host activity detected.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive Flow Table & DPI Inspector -->
+            <section class="grid-card full-width table-card">
+                <div class="card-header table-header-flex">
+                    <div class="card-header-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        <h2>Real-Time Inspected Flows & Policy Verdicts</h2>
+                    </div>
+
+                    <!-- Search & Filter Toolbar -->
+                    <div class="table-filters">
+                        <div class="search-box">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="filter-search" placeholder="Search IP, Hostname, SNI..." autocomplete="off">
+                        </div>
+
+                        <select id="filter-transport" class="filter-select">
+                            <option value="ALL">Transport: All</option>
+                            <option value="TCP">TCP</option>
+                            <option value="UDP">UDP</option>
+                        </select>
+
+                        <select id="filter-app" class="filter-select">
+                            <option value="ALL">App: All</option>
+                            <option value="TLS">TLS</option>
+                            <option value="HTTP">HTTP</option>
+                            <option value="DNS">DNS</option>
+                            <option value="Unknown">Unknown</option>
+                        </select>
+
+                        <select id="filter-verdict" class="filter-select">
+                            <option value="ALL">Verdict: All</option>
+                            <option value="ALLOW">ALLOW</option>
+                            <option value="BLOCK">BLOCK</option>
+                            <option value="ALERT">ALERT</option>
+                        </select>
+
+                        <select id="filter-risk" class="filter-select">
+                            <option value="ALL">Risk: All</option>
+                            <option value="CRITICAL">CRITICAL (&ge;80)</option>
+                            <option value="HIGH">HIGH (60-79)</option>
+                            <option value="MEDIUM">MEDIUM (30-59)</option>
+                            <option value="LOW">LOW (1-29)</option>
+                            <option value="NONE">NONE (0)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card-body no-padding">
+                    <div class="table-responsive">
+                        <table class="flows-table" id="flows-table">
+                            <thead>
+                                <tr>
+                                    <th>FLOW 5-TUPLE</th>
+                                    <th>RISK</th>
+                                    <th>PROTO</th>
+                                    <th>L7 APPLICATION</th>
+                                    <th>HOSTNAME / SNI</th>
+                                    <th>TCP STATE</th>
+                                    <th>POLICY VERDICT</th>
+                                    <th>FORWARD STATS</th>
+                                    <th>REVERSE STATS</th>
+                                    <th>DURATION</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="flows-tbody">
+                                <tr>
+                                    <td colspan="11" class="table-empty">Awaiting flow telemetry from engine...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-pagination">
+                        <span id="pagination-info" class="pagination-info">Showing 0 of 0 flows</span>
+                        <div class="pagination-buttons">
+                            <button id="btn-page-prev" class="btn btn-sm btn-control" disabled>&larr; Prev</button>
+                            <span id="pagination-current-page" class="page-indicator">Page 1</span>
+                            <button id="btn-page-next" class="btn btn-sm btn-control" disabled>Next &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Flow Detail Inspector Modal -->
+        <div id="flow-modal" class="modal hidden">
+            <div class="modal-backdrop" id="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <h3 id="modal-flow-id" class="modal-title">Flow Details</h3>
+                        <span id="modal-verdict-badge" class="badge">ALLOW</span>
+                    </div>
+                    <button id="btn-close-modal" class="btn-close">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-flow-body">
+                    <!-- Dynamic details filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Packet DPI Engine Stage 7 Telemetry Dashboard · Multi-Worker Pipeline · Deterministic Flow Affinity</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
