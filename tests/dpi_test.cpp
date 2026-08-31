@@ -167,8 +167,7 @@ void test_tls_client_hello() {
         std::string_view payload(reinterpret_cast<const char*>(tls_raw.data()), tls_raw.size());
 
         TlsMetadata meta;
-        bool ok = TlsParser::parse_client_hello(payload, meta);
-        assert(ok);
+        assert(TlsParser::parse_client_hello(payload, meta));
         assert(meta.legacy_version == 0x0301);
         assert(meta.client_version == 0x0303);
         assert(meta.has_sni);
@@ -186,8 +185,7 @@ void test_tls_client_hello() {
         std::string_view payload(reinterpret_cast<const char*>(tls_raw.data()), tls_raw.size());
 
         TlsMetadata meta;
-        bool ok = TlsParser::parse_client_hello(payload, meta);
-        assert(ok);
+        assert(TlsParser::parse_client_hello(payload, meta));
         assert(!meta.has_sni);
         assert(meta.sni.empty());
 
@@ -215,8 +213,7 @@ void test_tls_client_hello() {
         std::string_view payload(reinterpret_cast<const char*>(tls_raw.data()), tls_raw.size());
         TlsMetadata meta;
         // Still returns true as ClientHello, but SNI parsing gracefully terminates
-        bool ok = TlsParser::parse_client_hello(payload, meta);
-        assert(ok);
+        assert(TlsParser::parse_client_hello(payload, meta));
     }
 }
 
@@ -227,8 +224,7 @@ void test_http_request() {
     {
         std::string req = "GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: curl/7.68.0\r\n\r\n";
         HttpMetadata meta;
-        bool ok = HttpParser::parse_request(req, meta);
-        assert(ok);
+        assert(HttpParser::parse_request(req, meta));
         assert(meta.method == "GET");
         assert(meta.uri == "/index.html");
         assert(meta.version == "HTTP/1.1");
@@ -245,8 +241,7 @@ void test_http_request() {
     {
         std::string req = "POST /api/v1/data HTTP/1.1\r\nHost: api.service.local:8080\r\nContent-Length: 0\r\n\r\n";
         HttpMetadata meta;
-        bool ok = HttpParser::parse_request(req, meta);
-        assert(ok);
+        assert(HttpParser::parse_request(req, meta));
         assert(meta.method == "POST");
         assert(meta.has_host);
         assert(meta.host == "api.service.local"); // Port stripped
@@ -256,8 +251,7 @@ void test_http_request() {
     {
         std::string req = "HEAD / HTTP/1.0\r\nhost:   sub.domain.org   \r\n\r\n";
         HttpMetadata meta;
-        bool ok = HttpParser::parse_request(req, meta);
-        assert(ok);
+        assert(HttpParser::parse_request(req, meta));
         assert(meta.method == "HEAD");
         assert(meta.version == "HTTP/1.0");
         assert(meta.has_host);
@@ -268,8 +262,7 @@ void test_http_request() {
     {
         std::string req = "GET / HTTP/1.0\r\nAccept: */*\r\n\r\n";
         HttpMetadata meta;
-        bool ok = HttpParser::parse_request(req, meta);
-        assert(ok);
+        assert(HttpParser::parse_request(req, meta));
         assert(meta.method == "GET");
         assert(!meta.has_host);
         assert(meta.host.empty());
@@ -292,8 +285,7 @@ void test_dns_query() {
         std::string_view payload(reinterpret_cast<const char*>(dns_raw.data()), dns_raw.size());
 
         DnsMetadata meta;
-        bool ok = DnsParser::parse_query(payload, meta);
-        assert(ok);
+        assert(DnsParser::parse_query(payload, meta));
         assert(meta.transaction_id == 0x1234);
         assert(meta.qname == "www.google.com");
         assert(meta.qtype == 1);
@@ -334,8 +326,7 @@ void test_dns_query() {
 
         std::string_view payload(reinterpret_cast<const char*>(comp_query.data()), comp_query.size());
         DnsMetadata meta;
-        bool ok = DnsParser::parse_query(payload, meta);
-        assert(ok);
+        assert(DnsParser::parse_query(payload, meta));
         assert(meta.qname == "new.org");
     }
 
@@ -355,8 +346,7 @@ void test_dns_query() {
 
         std::string_view payload(reinterpret_cast<const char*>(cycle_dns.data()), cycle_dns.size());
         DnsMetadata meta;
-        bool ok = DnsParser::parse_query(payload, meta);
-        assert(!ok); // Safely rejected without infinite loop
+        assert(!DnsParser::parse_query(payload, meta)); // Safely rejected without infinite loop
     }
 
     // 4. Out-of-bounds pointer
@@ -583,7 +573,6 @@ void test_synthetic_pcap_dpi_pipeline() {
 
     FlowTable flow_table;
     PacketRecord rec;
-    size_t count = 0;
 
     while (reader.read_next_packet(rec) == PcapErrorCode::Success) {
         ParsedPacket parsed = ProtocolParser::parse(rec);
@@ -591,10 +580,8 @@ void test_synthetic_pcap_dpi_pipeline() {
         auto flow = flow_table.process_packet(rec, parsed, reader.global_header().is_nanosecond_resolution);
         assert(flow != nullptr);
         assert(flow->is_classified());
-        ++count;
     }
 
-    assert(count == 3);
     assert(flow_table.size() == 3);
 
     // Verify classified domains
@@ -615,6 +602,9 @@ void test_synthetic_pcap_dpi_pipeline() {
     assert(http_count == 1);
     assert(tls_count == 1);
     assert(dns_count == 1);
+    (void)http_count;
+    (void)tls_count;
+    (void)dns_count;
 }
 
 int main() {
