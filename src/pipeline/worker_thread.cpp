@@ -7,12 +7,14 @@ WorkerThread::WorkerThread(size_t id,
                            size_t queue_capacity,
                            const FlowTimeoutConfig& timeout_config,
                            std::shared_ptr<RuleEngine> rule_engine,
-                           const ThreatConfig& threat_config) noexcept
+                           const ThreatConfig& threat_config,
+                           const RiskConfig& risk_config) noexcept
     : id_(id),
       queue_(queue_capacity),
       rule_engine_(std::move(rule_engine)),
       threat_engine_(threat_config),
-      alert_buffer_(threat_config.max_alert_buffer_capacity) {
+      alert_buffer_(threat_config.max_alert_buffer_capacity),
+      risk_engine_(risk_config) {
     flow_table_.set_timeout_config(timeout_config);
     if (rule_engine_) {
         flow_table_.set_rule_engine(rule_engine_);
@@ -84,6 +86,16 @@ void WorkerThread::run() {
                 stats_.threat_alerts_generated.fetch_add(1, std::memory_order_relaxed);
             }
             stats_.threat_alerts_dropped.store(alert_buffer_.dropped_count(), std::memory_order_relaxed);
+
+            // Stage 9: Behavioral Profiling & Flow Risk Scoring
+            uint64_t ts_us = normalize_timestamp_us(job.record.header.ts_sec, job.record.header.ts_usec, job.is_nanoseconds);
+            bool is_fwd = true;
+            if (parsed.is_ipv4()) {
+                is_fwd = (IPAddress(parsed.ipv4.src_ip) == flow->key().src.ip);
+            } else if (parsed.is_ipv6()) {
+                is_fwd = (IPAddress(parsed.ipv6.src_ip) == flow->key().src.ip);
+            }
+            risk_engine_.evaluate_flow(*flow, parsed, ts_us, is_fwd, alerts_batch, flow->policy_verdict().action);
         } else {
             stats_.malformed_packets.fetch_add(1, std::memory_order_relaxed);
         }

@@ -1,4 +1,5 @@
 #include "dpi/telemetry/telemetry_collector.h"
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -106,6 +107,31 @@ TelemetrySnapshot TelemetryCollector::capture_snapshot() const {
                 snap.completed_flows++;
             }
 
+            // Stage 9 Risk & Behavioral telemetry
+            ft.risk_score = f->risk_score().score;
+            ft.risk_level = std::string(risk_level_to_string(f->risk_score().level));
+            ft.is_beaconing = f->behavioral_metrics().is_beaconing;
+            ft.is_exfiltration = f->behavioral_metrics().is_exfiltration;
+            ft.mean_iat_ms = f->behavioral_metrics().mean_iat_ms;
+            ft.iat_jitter_ratio = f->behavioral_metrics().iat_jitter_ratio;
+            ft.byte_ratio = f->behavioral_metrics().byte_ratio;
+            ft.risk_factors = f->risk_score().contributing_factors;
+
+            snap.risk_stats.total_flows_evaluated++;
+            switch (f->risk_score().level) {
+                case RiskLevel::None:     snap.risk_stats.risk_none_count++; break;
+                case RiskLevel::Low:      snap.risk_stats.risk_low_count++; break;
+                case RiskLevel::Medium:   snap.risk_stats.risk_medium_count++; break;
+                case RiskLevel::High:     snap.risk_stats.risk_high_count++; break;
+                case RiskLevel::Critical: snap.risk_stats.risk_critical_count++; break;
+            }
+            if (f->behavioral_metrics().is_beaconing) {
+                snap.risk_stats.beaconing_flows_detected++;
+            }
+            if (f->behavioral_metrics().is_exfiltration) {
+                snap.risk_stats.exfiltration_flows_detected++;
+            }
+
             snap.flows.push_back(std::move(ft));
             flows_collected++;
         });
@@ -146,6 +172,40 @@ TelemetrySnapshot TelemetryCollector::capture_snapshot() const {
     // Accumulate total dropped alerts count from atomic worker stats
     for (const auto& ws : snap.worker_stats) {
         snap.threat_stats.total_alerts_dropped += ws.threat_alerts_dropped;
+    }
+
+    // Stage 9: Merge and collect top risky hosts across workers
+    std::unordered_map<IPAddress, HostRiskProfile, IPAddressHasher> merged_hosts;
+    for (const auto& w : workers) {
+        auto worker_hosts = w->get_top_hosts(20);
+        for (const auto& h : worker_hosts) {
+            auto it = merged_hosts.find(h.ip);
+            if (it != merged_hosts.end()) {
+                it->second.total_flows += h.total_flows;
+                it->second.high_risk_flows += h.high_risk_flows;
+                if (h.max_flow_risk > it->second.max_flow_risk) {
+                    it->second.max_flow_risk = h.max_flow_risk;
+                }
+                if (h.has_beaconing_flow) it->second.has_beaconing_flow = true;
+                if (h.has_exfiltration_flow) it->second.has_exfiltration_flow = true;
+            } else {
+                merged_hosts.emplace(h.ip, h);
+            }
+        }
+    }
+
+    for (const auto& kv : merged_hosts) {
+        snap.risk_stats.top_risky_hosts.push_back(kv.second);
+    }
+    std::sort(snap.risk_stats.top_risky_hosts.begin(), snap.risk_stats.top_risky_hosts.end(),
+              [](const HostRiskProfile& a, const HostRiskProfile& b) {
+                  if (a.max_flow_risk != b.max_flow_risk) {
+                      return a.max_flow_risk > b.max_flow_risk;
+                  }
+                  return a.high_risk_flows > b.high_risk_flows;
+              });
+    if (snap.risk_stats.top_risky_hosts.size() > 20) {
+        snap.risk_stats.top_risky_hosts.resize(20);
     }
 
     return snap;

@@ -16,7 +16,7 @@ WorkerPool::WorkerPool(const WorkerConfig& config,
     workers_.reserve(count);
     for (size_t i = 0; i < count; ++i) {
         workers_.push_back(std::make_unique<WorkerThread>(
-            i, config_.queue_capacity, config_.timeout_config, rule_engine_, config_.threat_config));
+            i, config_.queue_capacity, config_.timeout_config, rule_engine_, config_.threat_config, config_.risk_config));
     }
 }
 

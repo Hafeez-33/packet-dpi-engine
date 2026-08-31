@@ -30,6 +30,14 @@ class FlowTelemetryModel(BaseModel):
     bytes_forward: int = 0
     bytes_reverse: int = 0
     duration_ms: int = 0
+    risk_score: int = 0
+    risk_level: str = "NONE"
+    is_beaconing: bool = False
+    is_exfiltration: bool = False
+    mean_iat_ms: float = 0.0
+    iat_jitter_ratio: float = 0.0
+    byte_ratio: float = 1.0
+    risk_factors: List[str] = Field(default_factory=list)
 
 class TrafficMetrics(BaseModel):
     total_packets: int = 0
@@ -86,6 +94,14 @@ class RawFlowModel(BaseModel):
     bytes_rev: int = 0
     duration_ms: int = 0
     is_blocked: bool = False
+    risk_score: int = 0
+    risk_level: str = "NONE"
+    is_beaconing: bool = False
+    is_exfiltration: bool = False
+    mean_iat_ms: float = 0.0
+    iat_jitter_ratio: float = 0.0
+    byte_ratio: float = 1.0
+    risk_factors: List[str] = Field(default_factory=list)
 
     def to_normalized(self) -> FlowTelemetryModel:
         return FlowTelemetryModel(
@@ -105,7 +121,15 @@ class RawFlowModel(BaseModel):
             packets_reverse=self.packets_rev,
             bytes_forward=self.bytes_fwd,
             bytes_reverse=self.bytes_rev,
-            duration_ms=self.duration_ms
+            duration_ms=self.duration_ms,
+            risk_score=self.risk_score,
+            risk_level=self.risk_level,
+            is_beaconing=self.is_beaconing,
+            is_exfiltration=self.is_exfiltration,
+            mean_iat_ms=self.mean_iat_ms,
+            iat_jitter_ratio=self.iat_jitter_ratio,
+            byte_ratio=self.byte_ratio,
+            risk_factors=self.risk_factors
         )
 
 class SeverityBreakdownModel(BaseModel):
@@ -123,6 +147,29 @@ class ThreatMetricsModel(BaseModel):
     dns_anomaly_alerts: int = 0
     signature_alerts: int = 0
     severity_breakdown: SeverityBreakdownModel = Field(default_factory=SeverityBreakdownModel)
+
+class RiskDistributionModel(BaseModel):
+    none: int = 0
+    low: int = 0
+    medium: int = 0
+    high: int = 0
+    critical: int = 0
+
+class HostRiskProfileModel(BaseModel):
+    ip: str = ""
+    total_flows: int = 0
+    high_risk_flows: int = 0
+    max_flow_risk: int = 0
+    average_flow_risk: float = 0.0
+    has_beaconing: bool = False
+    has_exfiltration: bool = False
+
+class RiskMetricsModel(BaseModel):
+    total_flows_evaluated: int = 0
+    beaconing_flows_detected: int = 0
+    exfiltration_flows_detected: int = 0
+    risk_distribution: RiskDistributionModel = Field(default_factory=RiskDistributionModel)
+    top_risky_hosts: List[HostRiskProfileModel] = Field(default_factory=list)
 
 class SecurityAlertModel(BaseModel):
     alert_id: int = 0
@@ -149,6 +196,7 @@ class TelemetrySnapshotModel(BaseModel):
     policy: PolicyMetrics = Field(default_factory=PolicyMetrics)
     errors: ErrorsModel = Field(default_factory=ErrorsModel)
     threat_metrics: ThreatMetricsModel = Field(default_factory=ThreatMetricsModel)
+    risk_metrics: RiskMetricsModel = Field(default_factory=RiskMetricsModel)
     workers: List[WorkerStatsModel] = Field(default_factory=list)
     flows: List[RawFlowModel] = Field(default_factory=list)
     alerts: List[SecurityAlertModel] = Field(default_factory=list)

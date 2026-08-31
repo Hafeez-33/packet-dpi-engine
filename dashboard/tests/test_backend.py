@@ -87,7 +87,15 @@ SAMPLE_SNAPSHOT = {
             "bytes_fwd": 15000,
             "bytes_rev": 35000,
             "duration_ms": 2500,
-            "is_blocked": False
+            "is_blocked": False,
+            "risk_score": 10,
+            "risk_level": "LOW",
+            "is_beaconing": False,
+            "is_exfiltration": False,
+            "mean_iat_ms": 50.0,
+            "iat_jitter_ratio": 0.45,
+            "byte_ratio": 0.43,
+            "risk_factors": ["High Jitter Traffic"]
         },
         {
             "id": "10.0.0.2:50000 <-> 192.168.1.100:8080 [TCP]",
@@ -106,7 +114,15 @@ SAMPLE_SNAPSHOT = {
             "bytes_fwd": 150,
             "bytes_rev": 0,
             "duration_ms": 10,
-            "is_blocked": True
+            "is_blocked": True,
+            "risk_score": 90,
+            "risk_level": "CRITICAL",
+            "is_beaconing": True,
+            "is_exfiltration": False,
+            "mean_iat_ms": 500.0,
+            "iat_jitter_ratio": 0.01,
+            "byte_ratio": 150.0,
+            "risk_factors": ["Threat Alert: Critical", "Security Policy: Traffic Blocked", "Periodic C2 Beaconing"]
         }
     ],
     "threat_metrics": {
@@ -123,6 +139,29 @@ SAMPLE_SNAPSHOT = {
             "low": 0,
             "info": 0
         }
+    },
+    "risk_metrics": {
+        "total_flows_evaluated": 2,
+        "beaconing_flows_detected": 1,
+        "exfiltration_flows_detected": 0,
+        "risk_distribution": {
+            "none": 0,
+            "low": 1,
+            "medium": 0,
+            "high": 0,
+            "critical": 1
+        },
+        "top_risky_hosts": [
+            {
+                "ip": "192.168.1.100",
+                "total_flows": 1,
+                "high_risk_flows": 1,
+                "max_flow_risk": 90,
+                "average_flow_risk": 90.0,
+                "has_beaconing": False,
+                "has_exfiltration": False
+            }
+        ]
     },
     "alerts": [
         {
@@ -292,4 +331,39 @@ def test_alerts_summary_endpoint():
     assert data["syn_flood_alerts"] == 1
     assert data["signature_alerts"] == 1
     assert data["severity_breakdown"]["critical"] == 1
+
+def test_risks_endpoint():
+    res = client.get("/api/risks")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_flows_evaluated"] == 2
+    assert data["beaconing_flows_detected"] == 1
+    assert data["risk_distribution"]["critical"] == 1
+    assert len(data["top_risky_hosts"]) == 1
+    assert data["top_risky_hosts"][0]["ip"] == "192.168.1.100"
+    assert data["top_risky_hosts"][0]["max_flow_risk"] == 90
+
+def test_risks_summary_endpoint():
+    res = client.get("/api/risks/summary")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_flows_evaluated"] == 2
+    assert data["beaconing_flows_detected"] == 1
+    assert data["risk_distribution"]["critical"] == 1
+    assert data["top_risky_hosts_count"] == 1
+
+def test_flows_risk_filtering():
+    # Filter by risk level
+    res_crit = client.get("/api/flows?risk_level=CRITICAL")
+    assert res_crit.status_code == 200
+    assert res_crit.json()["total"] == 1
+    assert res_crit.json()["flows"][0]["risk_level"] == "CRITICAL"
+    assert res_crit.json()["flows"][0]["risk_score"] == 90
+
+    # Filter by min_risk score
+    res_min_risk = client.get("/api/flows?min_risk=80")
+    assert res_min_risk.status_code == 200
+    assert res_min_risk.json()["total"] == 1
+    assert res_min_risk.json()["flows"][0]["risk_score"] >= 80
+
 

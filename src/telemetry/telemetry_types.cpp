@@ -114,6 +114,34 @@ std::string TelemetrySnapshot::to_json(bool pretty) const {
     ss << ind2 << "}" << nl;
     ss << ind << "}," << nl;
 
+    // Stage 9 Risk & Behavioral Statistics
+    ss << ind << "\"risk_metrics\": {" << nl;
+    ss << ind2 << "\"total_flows_evaluated\": " << risk_stats.total_flows_evaluated << "," << nl;
+    ss << ind2 << "\"beaconing_flows_detected\": " << risk_stats.beaconing_flows_detected << "," << nl;
+    ss << ind2 << "\"exfiltration_flows_detected\": " << risk_stats.exfiltration_flows_detected << "," << nl;
+    ss << ind2 << "\"risk_distribution\": {" << nl;
+    ss << ind3 << "\"none\": " << risk_stats.risk_none_count << "," << nl;
+    ss << ind3 << "\"low\": " << risk_stats.risk_low_count << "," << nl;
+    ss << ind3 << "\"medium\": " << risk_stats.risk_medium_count << "," << nl;
+    ss << ind3 << "\"high\": " << risk_stats.risk_high_count << "," << nl;
+    ss << ind3 << "\"critical\": " << risk_stats.risk_critical_count << nl;
+    ss << ind2 << "}," << nl;
+    ss << ind2 << "\"top_risky_hosts\": [" << nl;
+    for (size_t i = 0; i < risk_stats.top_risky_hosts.size(); ++i) {
+        const auto& h = risk_stats.top_risky_hosts[i];
+        ss << ind3 << "{" << nl;
+        ss << ind3 << ind << "\"ip\": \"" << escape_json(h.ip.to_string()) << "\"," << nl;
+        ss << ind3 << ind << "\"total_flows\": " << h.total_flows << "," << nl;
+        ss << ind3 << ind << "\"high_risk_flows\": " << h.high_risk_flows << "," << nl;
+        ss << ind3 << ind << "\"max_flow_risk\": " << static_cast<uint32_t>(h.max_flow_risk) << "," << nl;
+        ss << ind3 << ind << "\"average_flow_risk\": " << std::fixed << std::setprecision(1) << h.average_flow_risk << "," << nl;
+        ss << ind3 << ind << "\"has_beaconing\": " << (h.has_beaconing_flow ? "true" : "false") << "," << nl;
+        ss << ind3 << ind << "\"has_exfiltration\": " << (h.has_exfiltration_flow ? "true" : "false") << nl;
+        ss << ind3 << "}" << (i + 1 < risk_stats.top_risky_hosts.size() ? "," : "") << nl;
+    }
+    ss << ind2 << "]" << nl;
+    ss << ind << "}," << nl;
+
     // Workers
     ss << ind << "\"workers\": [" << nl;
     for (size_t i = 0; i < worker_stats.size(); ++i) {
@@ -178,7 +206,22 @@ std::string TelemetrySnapshot::to_json(bool pretty) const {
         ss << ind3 << "\"bytes_fwd\": " << f.bytes_forward << "," << nl;
         ss << ind3 << "\"bytes_rev\": " << f.bytes_reverse << "," << nl;
         ss << ind3 << "\"duration_ms\": " << f.duration_ms << "," << nl;
-        ss << ind3 << "\"is_blocked\": " << (f.is_blocked ? "true" : "false") << nl;
+        ss << ind3 << "\"is_blocked\": " << (f.is_blocked ? "true" : "false") << "," << nl;
+
+        // Stage 9 Risk fields
+        ss << ind3 << "\"risk_score\": " << static_cast<uint32_t>(f.risk_score) << "," << nl;
+        ss << ind3 << "\"risk_level\": \"" << escape_json(f.risk_level) << "\"," << nl;
+        ss << ind3 << "\"is_beaconing\": " << (f.is_beaconing ? "true" : "false") << "," << nl;
+        ss << ind3 << "\"is_exfiltration\": " << (f.is_exfiltration ? "true" : "false") << "," << nl;
+        ss << ind3 << "\"mean_iat_ms\": " << std::fixed << std::setprecision(2) << f.mean_iat_ms << "," << nl;
+        ss << ind3 << "\"iat_jitter_ratio\": " << std::fixed << std::setprecision(3) << f.iat_jitter_ratio << "," << nl;
+        ss << ind3 << "\"byte_ratio\": " << std::fixed << std::setprecision(2) << f.byte_ratio << "," << nl;
+        ss << ind3 << "\"risk_factors\": [";
+        for (size_t rf_idx = 0; rf_idx < f.risk_factors.size(); ++rf_idx) {
+            ss << "\"" << escape_json(f.risk_factors[rf_idx]) << "\"" << (rf_idx + 1 < f.risk_factors.size() ? ", " : "");
+        }
+        ss << "]" << nl;
+
         ss << ind2 << "}" << (i + 1 < flows.size() ? "," : "") << nl;
     }
     ss << ind << "]" << nl;

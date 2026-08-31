@@ -4,6 +4,7 @@
 #include "dpi/flow/flow_table.h"
 #include "dpi/packet/pcap_types.h"
 #include "dpi/threat/threat_config.h"
+#include "dpi/risk/risk_config.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -19,6 +20,7 @@ struct WorkerConfig {
     size_t queue_capacity{2048};           // Maximum queued packets per worker queue
     FlowTimeoutConfig timeout_config{};    // Configurable flow timeout settings
     ThreatConfig threat_config{};          // Configurable Stage 8 threat detection settings
+    RiskConfig risk_config{};              // Configurable Stage 9 risk scoring settings
 };
 
 /**

@@ -16,3 +16,10 @@ add_executable(threat_benchmark
 target_link_libraries(threat_benchmark PRIVATE packet_dpi_core)
 packet_dpi_enable_warnings(threat_benchmark)
 
+add_executable(risk_benchmark
+    risk_benchmark.cpp
+)
+target_link_libraries(risk_benchmark PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(risk_benchmark)
+
+

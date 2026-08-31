@@ -3,6 +3,7 @@
 
 #include "dpi/pipeline/pipeline_types.h"
 #include "dpi/threat/threat_types.h"
+#include "dpi/risk/risk_types.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -44,6 +45,16 @@ struct FlowTelemetry {
     uint64_t bytes_reverse{0};
     uint64_t duration_ms{0};
     bool is_blocked{false};
+
+    // Stage 9 Risk & Behavioral Telemetry
+    uint8_t risk_score{0};
+    std::string risk_level{"NONE"};
+    bool is_beaconing{false};
+    bool is_exfiltration{false};
+    double mean_iat_ms{0.0};
+    double iat_jitter_ratio{0.0};
+    double byte_ratio{1.0};
+    std::vector<std::string> risk_factors{};
 };
 
 /**
@@ -88,6 +99,9 @@ struct TelemetrySnapshot {
 
     // Stage 8 Threat & Anomaly Metrics
     ThreatStatsSnapshot threat_stats{};
+
+    // Stage 9 Risk & Behavioral Statistics
+    RiskStatsSnapshot risk_stats{};
 
     // Worker Pipeline Telemetry
     std::vector<WorkerStatsSnapshot> worker_stats{};

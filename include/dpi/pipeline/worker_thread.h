@@ -8,6 +8,7 @@
 #include "dpi/rules/rule_engine.h"
 #include "dpi/threat/bounded_alert_buffer.h"
 #include "dpi/threat/threat_engine.h"
+#include "dpi/risk/risk_engine.h"
 #include <atomic>
 #include <memory>
 #include <thread>
@@ -17,7 +18,7 @@ namespace dpi {
 
 /**
  * @brief Dedicated worker thread executing full protocol parsing, isolated flow tracking,
- * DPI inspection, policy evaluation, and Stage 8 threat detection.
+ * DPI inspection, policy evaluation, Stage 8 threat detection, and Stage 9 risk scoring.
  */
 class WorkerThread {
 public:
@@ -25,7 +26,8 @@ public:
                  size_t queue_capacity,
                  const FlowTimeoutConfig& timeout_config,
                  std::shared_ptr<RuleEngine> rule_engine,
-                 const ThreatConfig& threat_config = {}) noexcept;
+                 const ThreatConfig& threat_config = {},
+                 const RiskConfig& risk_config = {}) noexcept;
 
     ~WorkerThread();
 
@@ -43,6 +45,7 @@ public:
     const WorkerStats& stats() const noexcept { return stats_; }
     const FlowTable& flow_table() const noexcept { return flow_table_; }
     std::vector<SecurityAlert> get_alerts_snapshot() const { return alert_buffer_.get_snapshot(); }
+    std::vector<HostRiskProfile> get_top_hosts(size_t limit = 20) const { return risk_engine_.get_top_hosts(limit); }
 
 private:
     void run();
@@ -53,6 +56,7 @@ private:
     std::shared_ptr<RuleEngine> rule_engine_{nullptr};
     ThreatEngine threat_engine_{};
     BoundedAlertBuffer alert_buffer_{1000};
+    RiskEngine risk_engine_{};
     WorkerStats stats_{};
 
     std::thread thread_{};

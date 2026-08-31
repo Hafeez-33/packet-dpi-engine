@@ -8,6 +8,7 @@
 #include "dpi/flow/tcp_state_machine.h"
 #include "dpi/protocols/parsed_packet.h"
 #include "dpi/rules/rule_types.h"
+#include "dpi/risk/risk_types.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -46,6 +47,12 @@ public:
     bool is_blocked() const noexcept { return policy_verdict_.is_blocked(); }
     bool has_final_verdict() const noexcept { return policy_verdict_.is_final; }
     void set_policy_verdict(const PolicyVerdict& verdict) noexcept { policy_verdict_ = verdict; }
+
+    // Stage 9: Behavioral Metrics & Risk Scoring
+    const BehavioralMetrics& behavioral_metrics() const noexcept { return behavioral_metrics_; }
+    BehavioralMetrics& behavioral_metrics() noexcept { return behavioral_metrics_; }
+    const FlowRiskScore& risk_score() const noexcept { return risk_score_; }
+    void set_risk_score(const FlowRiskScore& score) noexcept { risk_score_ = score; }
 
     /**
      * @brief Appends incoming payload to the temporary reassembly buffer up to max_buffer_size.
@@ -94,6 +101,10 @@ private:
 
     // Policy & Rule Engine Verdict
     PolicyVerdict policy_verdict_{};
+
+    // Stage 9: Behavioral Metrics & Risk Scoring
+    BehavioralMetrics behavioral_metrics_{};
+    FlowRiskScore risk_score_{};
 };
 
 } // namespace dpi

@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "=======================================================\n";
-    std::cout << "  Packet DPI Engine v" << get_version_string() << " (Stage 7 Production Core)\n";
+    std::cout << "  Packet DPI Engine v" << get_version_string() << " (Stage 9 Production Core)\n";
     std::cout << "=======================================================\n";
 
     // 1. Initialize Rule Engine
@@ -160,6 +160,12 @@ int main(int argc, char* argv[]) {
               << ", HTTP=" << final_snap.http_flows
               << ", DNS=" << final_snap.dns_flows
               << ", Unknown=" << final_snap.unknown_l7_flows << "\n";
+    std::cout << "Threat Alerts:        Generated=" << final_snap.threat_stats.total_alerts_generated
+              << ", Dropped=" << final_snap.threat_stats.total_alerts_dropped << "\n";
+    std::cout << "Risk & NTA:           Evaluated=" << final_snap.risk_stats.total_flows_evaluated
+              << ", Beaconing=" << final_snap.risk_stats.beaconing_flows_detected
+              << ", Exfiltration=" << final_snap.risk_stats.exfiltration_flows_detected
+              << ", High/Crit=" << (final_snap.risk_stats.risk_high_count + final_snap.risk_stats.risk_critical_count) << "\n";
     std::cout << "Final Telemetry:      " << telemetry_path << "\n";
     std::cout << "=======================================================\n";
 

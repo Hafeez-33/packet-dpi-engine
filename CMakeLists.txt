@@ -76,6 +76,13 @@ add_library(packet_dpi_core
     src/threat/dns_anomaly_detector.cpp
     src/threat/payload_signature_matcher.cpp
     src/threat/threat_engine.cpp
+    src/risk/risk_types.cpp
+    src/risk/behavioral_profiler.cpp
+    src/risk/beaconing_detector.cpp
+    src/risk/exfiltration_detector.cpp
+    src/risk/risk_scorer.cpp
+    src/risk/host_risk_profiler.cpp
+    src/risk/risk_engine.cpp
 )
 
 target_include_directories(packet_dpi_core

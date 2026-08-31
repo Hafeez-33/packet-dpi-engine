@@ -119,6 +119,8 @@ def get_flows(
     transport: Optional[str] = Query(None, description="Transport protocol: ALL, TCP, UDP, Other"),
     app: Optional[str] = Query(None, description="L7 protocol: ALL, TLS, HTTP, DNS, Unknown"),
     verdict: Optional[str] = Query(None, description="Policy verdict: ALL, ALLOW, BLOCK, ALERT"),
+    risk_level: Optional[str] = Query(None, description="Risk level: ALL, NONE, LOW, MEDIUM, HIGH, CRITICAL"),
+    min_risk: Optional[int] = Query(None, ge=0, le=100, description="Minimum risk score threshold (0-100)"),
     search: Optional[str] = Query(None, description="Search term for IP, hostname, or rule")
 ):
     return telemetry_service.get_paginated_flows(
@@ -127,6 +129,8 @@ def get_flows(
         transport_protocol=transport,
         app_protocol=app,
         verdict=verdict,
+        risk_level=risk_level,
+        min_risk_score=min_risk,
         search=search
     )
 
@@ -150,6 +154,22 @@ def get_alerts(
 def get_alerts_summary():
     s = telemetry_service.load_snapshot()
     return s.threat_metrics
+
+@app.get("/api/risks")
+def get_risk_metrics():
+    s = telemetry_service.load_snapshot()
+    return s.risk_metrics
+
+@app.get("/api/risks/summary")
+def get_risk_summary():
+    s = telemetry_service.load_snapshot()
+    return {
+        "total_flows_evaluated": s.risk_metrics.total_flows_evaluated,
+        "beaconing_flows_detected": s.risk_metrics.beaconing_flows_detected,
+        "exfiltration_flows_detected": s.risk_metrics.exfiltration_flows_detected,
+        "risk_distribution": s.risk_metrics.risk_distribution,
+        "top_risky_hosts_count": len(s.risk_metrics.top_risky_hosts)
+    }
 
 @app.get("/api/flows/{flow_id}", response_model=FlowTelemetryModel)
 def get_flow_details(flow_id: str):

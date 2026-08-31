@@ -58,6 +58,8 @@ class TelemetryService:
         transport_protocol: Optional[str] = None,
         app_protocol: Optional[str] = None,
         verdict: Optional[str] = None,
+        risk_level: Optional[str] = None,
+        min_risk_score: Optional[int] = None,
         search: Optional[str] = None
     ) -> PaginatedFlowsResponse:
         snapshot = self.load_snapshot()
@@ -73,6 +75,12 @@ class TelemetryService:
 
         if verdict and verdict.upper() != "ALL":
             flows = [f for f in flows if f.policy_verdict.upper() == verdict.upper()]
+
+        if risk_level and risk_level.upper() != "ALL":
+            flows = [f for f in flows if f.risk_level.upper() == risk_level.upper()]
+
+        if min_risk_score is not None and min_risk_score > 0:
+            flows = [f for f in flows if f.risk_score >= min_risk_score]
 
         if search:
             s = search.lower().strip()

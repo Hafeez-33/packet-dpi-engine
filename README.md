@@ -16,6 +16,7 @@ A high-performance, production-grade **C++17 Deep Packet Inspection (DPI)** engi
 | **Stage 6** | **Multi-Worker Pipeline** | **`COMPLETED`** | Multi-threaded producer-consumer architecture with zero-allocation flow routing, deterministic flow pinning, and worker-isolated tables. |
 | **Stage 7** | **Telemetry & Dashboard** | **`COMPLETED`** | Lock-free thread-safe snapshots, atomic JSON exports, REST API (FastAPI), and a modern dark-mode real-time web dashboard. |
 | **Stage 8** | **Threat & Anomaly Engine** | **`COMPLETED`** | Worker-local IDS heuristics: horizontal/vertical port scans, stateful SYN flood tracking, Shannon entropy DNS tunneling/DGA, bounded signature matcher, and ring buffer telemetry. |
+| **Stage 9** | **Flow Risk & Behavioral Engine** | **`COMPLETED`** | Streaming Welford IAT mean/variance/jitter ratio, low-jitter periodic C2 beaconing detection, directional data exfiltration asymmetry, normalized 0–100 composite risk scoring, and bounded LRU host risk profiling. |
 
 ---
 
@@ -33,16 +34,19 @@ packet-dpi-engine/
 │   ├── rules/                  # Security policy and matcher engine
 │   ├── pipeline/               # Multi-worker threads and flow router
 │   ├── telemetry/              # Lock-free telemetry collector & atomic JSON
-│   └── threat/                 # Stage 8 Threat & Anomaly detection engine
+│   ├── threat/                 # Stage 8 Threat & Anomaly detection engine
+│   └── risk/                   # Stage 9 Flow Risk & Behavioral Profiling (NTA)
 ├── src/                        # C++ core implementations
-├── tests/                      # 9 CTest test suites (100% passing)
-├── benchmarks/                 # Pipeline, Telemetry, and Threat benchmarks
-├── config/                     # Sample security policy & threat rules
-├── scripts/                    # PCAP generators and test scripts
-├── dashboard/                  # Telemetry & Security Alerts Dashboard
+│   ├── risk/                   # Stage 9 Behavioral profiler, detectors, scorer
+│   └── ...
+├── tests/                      # 10 CTest test suites (100% passing)
+├── benchmarks/                 # Pipeline, Telemetry, Threat, and Risk benchmarks
+├── config/                     # Sample security policy, threat rules & risk config
+├── scripts/                    # PCAP generators (sample, malicious, beaconing)
+├── dashboard/                  # Telemetry, Security Alerts & Risk Posture Dashboard
 │   ├── backend/                # FastAPI REST API & safe JSON service
 │   ├── frontend/               # Semantic HTML5, CSS, and vanilla JS UI
-│   └── tests/                  # Backend pytest test suite (11 tests)
+│   └── tests/                  # Backend pytest test suite (14 tests)
 └── docs/                       # Architecture documentation
 ```
 
@@ -63,7 +67,7 @@ cmake -B build -S . -DPACKET_DPI_BUILD_BENCHMARKS=ON
 # Build all binaries
 cmake --build build
 
-# Run complete CTest regression suite (8/8 targets)
+# Run complete CTest regression suite (10/10 targets)
 ctest --test-dir build --output-on-failure --verbose
 ```
 
@@ -74,6 +78,12 @@ ctest --test-dir build --output-on-failure --verbose
 
 # Stage 7 telemetry overhead benchmark (without vs with live telemetry)
 ./build/benchmarks/telemetry_benchmark.exe
+
+# Stage 8 threat detection benchmark
+./build/benchmarks/threat_benchmark.exe
+
+# Stage 9 risk scoring & behavioral profiling benchmark
+./build/benchmarks/risk_benchmark.exe
 ```
 
 ### 3. Run Backend Test Suite

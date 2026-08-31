@@ -88,8 +88,18 @@ packet_dpi_enable_warnings(threat_test)
 
 add_test(NAME ThreatTest COMMAND threat_test)
 
+# Stage 9: Risk & Behavioral Profiling Unit Test Target
+add_executable(risk_test
+    risk_test.cpp
+)
+
+target_link_libraries(risk_test PRIVATE packet_dpi_core)
+packet_dpi_enable_warnings(risk_test)
+
+add_test(NAME RiskTest COMMAND risk_test)
+
 if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest ThreatTest
+    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest ThreatTest RiskTest
         PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
     )
 endif()

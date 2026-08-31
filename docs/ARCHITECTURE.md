@@ -161,3 +161,27 @@ The packet processing lifecycle flows through seven discrete, decoupled pipeline
   - REST endpoints `/api/alerts` (paginated, filtered, searchable) and `/api/alerts/summary` (severity breakdown).
   - Live Security Alerts KPI counter and interactive threat alert table in the web dashboard UI with severity color badges and matched payload snippets.
 
+### Stage 9: Flow Risk Scoring & Behavioral Traffic Profiling Engine (NTA) [IMPLEMENTED]
+- **Worker-Local Zero-Lock Risk & NTA Coordination** (`RiskEngine`):
+  - Each worker thread maintains an isolated `RiskEngine` instance orchestrating online behavioral profiling, anomaly detectors, composite risk scoring, and host posture profiling.
+  - Fast-path execution without locks or cross-worker synchronization.
+- **Streaming Statistical Profiler via Welford's Algorithm** (`FlowBehavioralProfiler`):
+  - Single-pass, $O(1)$ time and $O(1)$ memory streaming statistical calculator for packet inter-arrival times (IAT).
+  - Computes exact mean ($\mu$), sample variance ($s^2$), standard deviation ($\sigma$), and coefficient of variation / jitter ratio ($CV = \sigma / \mu$) with zero heap allocation.
+  - Tracks directional byte asymmetry ratio ($Ratio = Bytes_{fwd} / \max(1, Bytes_{rev})$) and packet size distribution buckets.
+- **Periodic C2 Beaconing Detector** (`BeaconingDetector`):
+  - Identifies automated malware command-and-control heartbeats by evaluating inter-arrival time regularity ($CV \le 0.15$) across minimum interval observations ($N \ge 8$).
+  - Distinguishes high-jitter human web browsing from machine-generated periodicity.
+- **Directional Data Exfiltration Detector** (`ExfiltrationDetector`):
+  - Identifies massive outbound data transfers characterized by high directional volume asymmetry ($Ratio \ge 20.0$, $Bytes_{fwd} \ge 1\text{ MB}$).
+- **Normalized Composite Risk Scorer** (`RiskScorer`):
+  - Multidimensional scoring algorithm synthesizing Stage 4 DPI, Stage 5 policy decisions, Stage 8 threat alerts, and Stage 9 behavioral heuristics into a normalized score ($0 \le S \le 100$).
+  - Categorizes flows into standardized risk tiers: `None` (0), `Low` (1–29), `Medium` (30–59), `High` (60–79), and `Critical` (80–100).
+  - Bounded contributing risk factor explanations (maximum 5 per flow).
+- **Bounded Host Risk Profiler** (`HostRiskProfiler`):
+  - Hard-bounded LRU table ($N=4096$) tracking per-IP security posture, maximum flow risk, high-risk flow count, and beaconing/exfiltration indicators.
+- **NTA Telemetry & Dashboard Integration**:
+  - REST endpoints `/api/risks` and `/api/risks/summary` exposing risk distribution breakdowns and top risky hosts.
+  - Enhanced `/api/flows` supporting risk level (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `NONE`) and `min_risk` threshold filtering.
+  - UI additions: High/Crit Risk KPI card, Host Risk table, color-coded risk badges in the flow table, and Behavioral Analytics details in the flow modal drawer.
+

@@ -16,6 +16,7 @@
             transport: 'ALL',
             app: 'ALL',
             verdict: 'ALL',
+            risk: 'ALL',
             search: ''
         },
         alertFilters: {
@@ -51,6 +52,15 @@
         kpiBlockedPackets: document.getElementById('kpi-blocked-packets'),
         kpiThreatAlerts: document.getElementById('kpi-threat-alerts'),
         kpiThreatDropped: document.getElementById('kpi-threat-dropped'),
+        kpiRiskHigh: document.getElementById('kpi-risk-high'),
+        kpiRiskSub: document.getElementById('kpi-risk-sub'),
+
+        // Stage 9 Risk Elements
+        badgeRiskCrit: document.getElementById('badge-risk-crit'),
+        badgeRiskHigh: document.getElementById('badge-risk-high'),
+        badgeRiskMed: document.getElementById('badge-risk-med'),
+        badgeRiskLow: document.getElementById('badge-risk-low'),
+        hostsTbody: document.getElementById('hosts-tbody'),
 
         // Alerts Table & Filters
         filterAlertSearch: document.getElementById('filter-alert-search'),
@@ -85,6 +95,7 @@
         filterTransport: document.getElementById('filter-transport'),
         filterApp: document.getElementById('filter-app'),
         filterVerdict: document.getElementById('filter-verdict'),
+        filterRisk: document.getElementById('filter-risk'),
         flowsTbody: document.getElementById('flows-tbody'),
         paginationInfo: document.getElementById('pagination-info'),
         paginationCurrentPage: document.getElementById('pagination-current-page'),
@@ -216,6 +227,22 @@
             elements.kpiThreatDropped.textContent = `${formatNumber(tm.total_alerts_dropped || 0)} dropped · ${formatNumber(sev.critical || 0)} crit`;
         }
 
+        // Update Stage 9 Risk Metrics
+        const rm = snapshot.risk_metrics || {};
+        const rd = rm.risk_distribution || {};
+        const highCrit = (rd.high || 0) + (rd.critical || 0);
+        if (elements.kpiRiskHigh) {
+            elements.kpiRiskHigh.textContent = formatNumber(highCrit);
+            elements.kpiRiskSub.textContent = `${formatNumber(rm.beaconing_flows_detected || 0)} beacon · ${formatNumber(rm.exfiltration_flows_detected || 0)} exfil`;
+        }
+
+        if (elements.badgeRiskCrit) elements.badgeRiskCrit.textContent = `${formatNumber(rd.critical || 0)} Critical`;
+        if (elements.badgeRiskHigh) elements.badgeRiskHigh.textContent = `${formatNumber(rd.high || 0)} High`;
+        if (elements.badgeRiskMed) elements.badgeRiskMed.textContent = `${formatNumber(rd.medium || 0)} Medium`;
+        if (elements.badgeRiskLow) elements.badgeRiskLow.textContent = `${formatNumber(rd.low || 0)} Low`;
+
+        updateHostsTable(rm.top_risky_hosts || []);
+
         // Update Sparkline History
         state.throughputHistory.push({
             pps: pps,
@@ -263,6 +290,38 @@
         updateWorkers(snapshot.workers || []);
     }
 
+    // Render Stage 9 Top Risky Hosts Table
+    function updateHostsTable(hosts) {
+        if (!elements.hostsTbody) return;
+        if (!hosts || hosts.length === 0) {
+            elements.hostsTbody.innerHTML = `<tr><td colspan="5" class="table-empty">No risky host activity detected.</td></tr>`;
+            return;
+        }
+
+        elements.hostsTbody.innerHTML = hosts.map(h => {
+            let riskBadgeClass = 'badge-risk-none';
+            if (h.max_flow_risk >= 80) riskBadgeClass = 'badge-risk-crit';
+            else if (h.max_flow_risk >= 60) riskBadgeClass = 'badge-risk-high';
+            else if (h.max_flow_risk >= 30) riskBadgeClass = 'badge-risk-med';
+            else if (h.max_flow_risk > 0) riskBadgeClass = 'badge-risk-low';
+
+            let flags = [];
+            if (h.has_beaconing) flags.push('<span class="risk-factor-tag">C2 Beacon</span>');
+            if (h.has_exfiltration) flags.push('<span class="risk-factor-tag">Data Exfil</span>');
+            if (flags.length === 0) flags.push('<span style="color: var(--text-muted); font-size: 0.75rem;">None</span>');
+
+            return `
+                <tr>
+                    <td><span class="flow-tuple">${h.ip}</span></td>
+                    <td><span class="badge ${riskBadgeClass}">${h.max_flow_risk} / 100</span></td>
+                    <td><span class="flow-stats-col">${formatNumber(h.total_flows)}</span></td>
+                    <td><span class="flow-stats-col" style="color: #f87171; font-weight: 600;">${formatNumber(h.high_risk_flows)}</span></td>
+                    <td>${flags.join(' ')}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
     // Render Worker Cards
     function updateWorkers(workers) {
         elements.workerCountBadge.textContent = `${workers.length} Worker Threads`;
@@ -305,7 +364,8 @@
                 page_size: state.pageSize,
                 transport: state.filters.transport,
                 app: state.filters.app,
-                verdict: state.filters.verdict
+                verdict: state.filters.verdict,
+                risk_level: state.filters.risk
             });
             if (state.filters.search) {
                 params.append('search', state.filters.search);
@@ -329,7 +389,7 @@
         elements.btnPageNext.disabled = data.page >= data.total_pages;
 
         if (flows.length === 0) {
-            elements.flowsTbody.innerHTML = `<tr><td colspan="10" class="table-empty">No flows matching filter criteria.</td></tr>`;
+            elements.flowsTbody.innerHTML = `<tr><td colspan="11" class="table-empty">No flows matching filter criteria.</td></tr>`;
             return;
         }
 
@@ -343,9 +403,16 @@
             if (f.policy_verdict === 'BLOCK') verdictBadgeClass = 'badge-block';
             else if (f.policy_verdict === 'ALERT') verdictBadgeClass = 'badge-alert';
 
+            let riskBadgeClass = 'badge-risk-none';
+            if (f.risk_level === 'CRITICAL') riskBadgeClass = 'badge-risk-crit';
+            else if (f.risk_level === 'HIGH') riskBadgeClass = 'badge-risk-high';
+            else if (f.risk_level === 'MEDIUM') riskBadgeClass = 'badge-risk-med';
+            else if (f.risk_level === 'LOW') riskBadgeClass = 'badge-risk-low';
+
             return `
                 <tr>
                     <td><span class="flow-tuple">${f.src_ip}:${f.src_port} &rarr; ${f.dst_ip}:${f.dst_port}</span></td>
+                    <td><span class="badge ${riskBadgeClass}">${f.risk_score} (${f.risk_level})</span></td>
                     <td><span class="badge ${f.transport_protocol === 'TCP' ? 'badge-tcp' : 'badge-udp'}">${f.transport_protocol}</span></td>
                     <td><span class="badge ${appBadgeClass}">${f.app_protocol}</span></td>
                     <td><div class="flow-host" title="${f.host_or_sni || '-'}">${f.host_or_sni || '-'}</div></td>
@@ -381,10 +448,30 @@
             elements.modalVerdictBadge.className = `badge ${f.policy_verdict === 'BLOCK' ? 'badge-block' : 'badge-allow'}`;
             elements.modalVerdictBadge.textContent = f.policy_verdict;
 
+            const factorsHtml = (f.risk_factors && f.risk_factors.length > 0)
+                ? `<div class="risk-factors-list">${f.risk_factors.map(rf => `<span class="risk-factor-tag">${rf}</span>`).join(' ')}</div>`
+                : '<span style="color: var(--text-muted);">None (Clean traffic profile)</span>';
+
             elements.modalFlowBody.innerHTML = `
                 <div class="modal-detail-row">
                     <span class="modal-detail-label">5-Tuple</span>
                     <span class="modal-detail-val">${f.src_ip}:${f.src_port} &harr; ${f.dst_ip}:${f.dst_port} [${f.transport_protocol}]</span>
+                </div>
+                <div class="modal-detail-row">
+                    <span class="modal-detail-label">Composite Risk Score</span>
+                    <span class="modal-detail-val"><span class="badge ${f.risk_level === 'CRITICAL' ? 'badge-risk-crit' : (f.risk_level === 'HIGH' ? 'badge-risk-high' : (f.risk_level === 'MEDIUM' ? 'badge-risk-med' : 'badge-risk-low'))}">${f.risk_score} / 100 (${f.risk_level})</span></span>
+                </div>
+                <div class="modal-detail-row">
+                    <span class="modal-detail-label">Contributing Risk Factors</span>
+                    <span class="modal-detail-val">${factorsHtml}</span>
+                </div>
+                <div class="modal-detail-row">
+                    <span class="modal-detail-label">Behavioral Profiling</span>
+                    <span class="modal-detail-val">Mean IAT: ${f.mean_iat_ms ? f.mean_iat_ms.toFixed(1) : '0.0'} ms · Jitter Ratio: ${f.iat_jitter_ratio ? f.iat_jitter_ratio.toFixed(3) : '0.000'} · Byte Ratio: ${f.byte_ratio ? f.byte_ratio.toFixed(2) : '1.00'}</span>
+                </div>
+                <div class="modal-detail-row">
+                    <span class="modal-detail-label">Behavioral Anomaly Flags</span>
+                    <span class="modal-detail-val">${f.is_beaconing ? '<span class="risk-factor-tag">Periodic C2 Beaconing</span>' : ''} ${f.is_exfiltration ? '<span class="risk-factor-tag">Data Exfiltration</span>' : ''} ${(!f.is_beaconing && !f.is_exfiltration) ? 'None' : ''}</span>
                 </div>
                 <div class="modal-detail-row">
                     <span class="modal-detail-label">L7 Classified Protocol</span>
@@ -543,6 +630,14 @@
         state.currentPage = 1;
         fetchFlows();
     });
+
+    if (elements.filterRisk) {
+        elements.filterRisk.addEventListener('change', (e) => {
+            state.filters.risk = e.target.value;
+            state.currentPage = 1;
+            fetchFlows();
+        });
+    }
 
     let searchTimeout;
     elements.filterSearch.addEventListener('input', (e) => {
