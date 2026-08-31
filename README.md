@@ -1,5 +1,7 @@
 # Packet DPI Engine
 
+[![CI](https://github.com/Hafeez-33/packet-dpi-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Hafeez-33/packet-dpi-engine/actions/workflows/ci.yml)
+
 A high-performance, production-grade **C++17 Deep Packet Inspection (DPI)** engine, security policy firewall, and real-time monitoring system.
 
 ---
@@ -169,3 +171,36 @@ Rules are defined in standard JSON format (`config/sample_rules.json`):
 | `/api/flows/{flow_id}` | `GET` | Detailed bidirectional statistics for a single flow |
 | `/api/alerts` | `GET` | Paginated threat alerts with severity/category filtering and text search |
 | `/api/alerts/summary` | `GET` | Security alert counts, severity breakdown, and detector summary |
+| `/api/risks` | `GET` | Stage 9 flow risk distribution and top risky host profiles |
+| `/api/risks/summary` | `GET` | Risk summary counts, beaconing/exfiltration flows, and host ranking |
+
+---
+
+## Continuous Integration (CI)
+
+The repository uses **GitHub Actions** for automated multi-stage continuous integration across the C++17 engine and Python monitoring dashboard.
+
+### CI Scope & Triggers
+- **Triggers**: Runs on every `pull_request` targeting `dev` or `main`, as well as direct pushes to `dev`.
+- **Jobs**:
+  1. **C++ Core Build & CTest (Windows UCRT64)**:
+     - Configures CMake with strict warnings-as-errors (`-DPACKET_DPI_ENABLE_WARNINGS_AS_ERRORS=ON`).
+     - Builds the `packet_dpi_core` library and all test targets via Ninja/GCC 16.
+     - Executes the complete 10-suite CTest regression suite.
+  2. **Dashboard Backend Pytest (Python 3.12)**:
+     - Sets up Python 3.12 and installs backend dependencies.
+     - Executes the 14-suite backend test suite covering all REST endpoints and telemetry fallback scenarios.
+
+### Local Reproduction
+Developers can replicate the CI verification pipeline locally before submitting pull requests:
+
+```powershell
+# 1. Build and test C++ engine with warnings-as-errors
+$env:PATH = "C:\MSYS2\ucrt64\bin;" + $env:PATH
+cmake -G "MinGW Makefiles" -B build -S . -DPACKET_DPI_BUILD_TESTS=ON -DPACKET_DPI_ENABLE_WARNINGS_AS_ERRORS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure --verbose
+
+# 2. Run Python dashboard test suite
+python -m pytest dashboard/tests -v
+```
