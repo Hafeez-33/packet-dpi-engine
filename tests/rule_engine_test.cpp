@@ -311,14 +311,14 @@ void test_priority_and_deterministic_resolution() {
     engine.add_rule(r1);
     engine.add_rule(r2);
 
-    auto [key1, dir1] = FlowKey::create(IPAddress(*IPv4Address::from_string("192.168.1.100")), 50000,
-                                        IPAddress(*IPv4Address::from_string("10.0.0.50")), 443, 6);
+    FlowKey key1 = FlowKey::create(IPAddress(*IPv4Address::from_string("192.168.1.100")), 50000,
+                                   IPAddress(*IPv4Address::from_string("10.0.0.50")), 443, 6).first;
     PolicyVerdict v1 = engine.evaluate_l3_l4(key1);
     assert(v1.action == RuleAction::Allow); // High-priority rule 2 wins
     assert(v1.matched_rule_id == 2);
 
-    auto [key2, dir2] = FlowKey::create(IPAddress(*IPv4Address::from_string("192.168.1.100")), 50000,
-                                        IPAddress(*IPv4Address::from_string("93.184.216.34")), 443, 6);
+    FlowKey key2 = FlowKey::create(IPAddress(*IPv4Address::from_string("192.168.1.100")), 50000,
+                                   IPAddress(*IPv4Address::from_string("93.184.216.34")), 443, 6).first;
     PolicyVerdict v2 = engine.evaluate_l3_l4(key2);
     assert(v2.action == RuleAction::Block); // Rule 1 matches
     assert(v2.matched_rule_id == 1);
