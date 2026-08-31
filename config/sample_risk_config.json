@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "max_host_profiles": 4096,
+  "beaconing": {
+    "min_intervals": 8,
+    "max_jitter_ratio": 0.15,
+    "min_interval_ms": 100.0,
+    "max_interval_ms": 300000.0
+  },
+  "exfiltration": {
+    "min_fwd_bytes": 1048576,
+    "min_byte_ratio": 20.0
+  },
+  "weights": {
+    "threat_alert_critical": 50,
+    "threat_alert_high": 35,
+    "threat_alert_medium": 20,
+    "threat_alert_low": 10,
+    "policy_blocked": 40,
+    "policy_alert": 20,
+    "beaconing_detected": 35,
+    "exfiltration_detected": 40,
+    "high_jitter": 5,
+    "suspicious_port": 15,
+    "unknown_l7": 10
+  }
+}
