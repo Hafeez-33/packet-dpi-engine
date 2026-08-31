@@ -50,6 +50,24 @@ flowchart LR
 
 ---
 
+## Dashboard Preview
+
+The following screenshots demonstrate the web monitoring interface visualizing telemetry, threat alerts, and behavioral risk posture generated from offline PCAP workloads:
+
+### 1. Engine Telemetry & System Overview
+![Dashboard Overview](docs/images/dashboard-overview.png)
+*High-level overview showing aggregate packet/byte counters, active flow counts, multi-worker core load distribution, and Layer-4/Layer-7 protocol breakdowns.*
+
+### 2. Threat Detection & Security Alerts
+![Threat Detection](docs/images/threat-detection.png)
+*Security alert stream highlighting horizontal/vertical port scans, stateful SYN flood tracking, DNS tunneling entropy anomalies, and payload signature matches.*
+
+### 3. Behavioral Risk Analysis & Host Profiling
+![Risk Analysis](docs/images/risk-analysis.png)
+*Network Traffic Analysis (NTA) view featuring composite 0–100 host risk ranking, periodic C2 beaconing detection via streaming IAT jitter, and directional data exfiltration volume asymmetry.*
+
+---
+
 ## Key Features Grouped by Stage
 
 | Stage | Module | Key Features |
@@ -153,7 +171,6 @@ The engine includes a lightweight, responsive real-time security dashboard built
 +-----------------------------------------------------------------------------------+
 ```
 
-*(Dashboard screenshot placeholder: `docs/images/dashboard_preview.png`)*
 
 ---
 
