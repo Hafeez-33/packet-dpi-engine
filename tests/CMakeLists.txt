@@ -105,12 +105,6 @@ packet_dpi_enable_warnings(risk_test)
 
 add_test(NAME RiskTest COMMAND risk_test)
 
-if(WIN32)
-    set_tests_properties(CoreVersionTest PcapReaderTest ProtocolParserTest FlowTrackingTest DpiTest RuleEngineTest WorkerPipelineTest TelemetryTest ThreatTest RiskTest
-        PROPERTIES ENVIRONMENT "PATH=C:/MSYS2/ucrt64/bin;$ENV{PATH}"
-    )
-endif()
-
 
 
 
