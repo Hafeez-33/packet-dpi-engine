@@ -491,8 +491,8 @@ void test_dpi_buffer_limit_abandon() {
         assert(entry != nullptr);
     }
 
-    auto [key, dir] = FlowKey::create(IPAddress(IPv4Address(client_ip)), client_port,
-                                      IPAddress(IPv4Address(server_ip)), server_port, 6);
+    FlowKey key = FlowKey::create(IPAddress(IPv4Address(client_ip)), client_port,
+                                  IPAddress(IPv4Address(server_ip)), server_port, 6).first;
     auto entry = table.find_flow(key);
     assert(entry != nullptr);
     assert(entry->is_dpi_complete());
@@ -602,9 +602,6 @@ void test_synthetic_pcap_dpi_pipeline() {
     assert(http_count == 1);
     assert(tls_count == 1);
     assert(dns_count == 1);
-    (void)http_count;
-    (void)tls_count;
-    (void)dns_count;
 }
 
 int main() {

@@ -1,3 +1,10 @@
+# Ensure assert() statements in test targets are always active in all build configurations (including Release)
+if(MSVC)
+    add_compile_options(/UNDEBUG)
+else()
+    add_compile_options(-UNDEBUG)
+endif()
+
 # Minimal test runner target
 add_executable(unit_tests
     main_test.cpp
